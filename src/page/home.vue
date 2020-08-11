@@ -52,7 +52,13 @@
             <!--中部左侧上方内容-->
             <el-row>
               <el-col>
-                <el-form class="query-form" :rules="rules" :inline="true" :model="queryForm" ref="queryForm">
+                <el-form
+                  class="query-form"
+                  :rules="rules"
+                  :inline="true"
+                  :model="queryForm"
+                  ref="queryForm"
+                >
                   <el-form-item label="出发地：" prop="fromStationCode">
                     <el-select
                       size="mini"
@@ -103,13 +109,13 @@
 
                   <el-form-item prop="ticketType">
                     <el-radio-group v-model="queryForm.ticketType">
-                      <el-radio class="radio-style" label="ADULT">普通票</el-radio>
-                      <el-radio label="0X00">学生票</el-radio>
+                      <el-radio class="radio-style" label="TICKETS">普通票</el-radio>
+                      <el-radio label="STUDENT_TICKET">学生票</el-radio>
                     </el-radio-group>
                   </el-form-item>
 
                   <el-form-item>
-                    <el-button type="primary" @click="queryTicketInfo('queryForm')">查询</el-button>
+                    <el-button type="primary" @click="submitQueryForm('queryForm')">查询</el-button>
                   </el-form-item>
                 </el-form>
               </el-col>
@@ -120,13 +126,13 @@
               <el-col>
                 <el-form :inline="true">
                   <el-form-item label="车次类型：">
-                    <el-checkbox-group v-model="trainCodeType">
-                      <el-checkbox label="G-高铁"></el-checkbox>
-                      <el-checkbox label="D-动车"></el-checkbox>
-                      <el-checkbox label="Z-直达"></el-checkbox>
-                      <el-checkbox label="T-特快"></el-checkbox>
-                      <el-checkbox label="K-快速"></el-checkbox>
-                      <el-checkbox label="其他"></el-checkbox>
+                    <el-checkbox-group v-model="trainCodeType" @change="filterTrainInfo(1)">
+                      <el-checkbox label="G" key="G">G-高铁</el-checkbox>
+                      <el-checkbox label="D" key="D">D-动车</el-checkbox>
+                      <el-checkbox label="Z" key="Z">Z-直达</el-checkbox>
+                      <el-checkbox label="T" key="T">T-特快</el-checkbox>
+                      <el-checkbox label="K" key="K">K-快速</el-checkbox>
+                      <el-checkbox label="O" key="O">其他</el-checkbox>
                     </el-checkbox-group>
                   </el-form-item>
                   <el-form-item class="send-train-time" label="发车时间：">
@@ -152,10 +158,12 @@
               <el-col>
                 <el-form :inline="true">
                   <el-form-item label="出发车站：">
-                    <el-checkbox-group v-model="toStation">
-                      <el-checkbox label="上海虹桥"></el-checkbox>
-                      <el-checkbox label="上海南"></el-checkbox>
-                      <el-checkbox label="上海"></el-checkbox>
+                    <el-checkbox-group v-model="fromStation" @change="filterTrainInfo(2)">
+                      <el-checkbox
+                        v-for="item in fromStationArray"
+                        :label="item.fromStationCode"
+                        :key="item.fromStationCode"
+                      >{{item.fromStationName}}</el-checkbox>
                     </el-checkbox-group>
                   </el-form-item>
                 </el-form>
@@ -211,7 +219,14 @@
       </el-header>
       <el-main class="main-content">
         <!-- <h2>主体内容</h2> -->
-        <el-table stripe :data="tableData" height="530" border style="width: 100%">
+        <el-table
+          stripe
+          :data="tableData"
+          height="530"
+          border
+          style="width: 100%"
+          v-loading="tabLoading"
+        >
           <el-table-column type="selection" width="55" align="center"></el-table-column>
           <el-table-column prop="trainCode" label="车次" width="100" align="center"></el-table-column>
           <el-table-column prop="from_to_station" label="出发站 - 到达站" width="180" align="center"></el-table-column>
@@ -230,12 +245,7 @@
           <el-table-column prop="other" label="其他" align="center"></el-table-column>
           <el-table-column prop="remark" label="备注" align="center"></el-table-column>
         </el-table>
-        <el-pagination
-          background
-          class="page-style"
-          layout="total,sizes,prev, pager, next"
-          :total="60"
-        ></el-pagination>
+        <el-pagination background class="page-style" layout="total" :total="tabTotal"></el-pagination>
       </el-main>
     </el-container>
   </div>
@@ -273,25 +283,41 @@ export default {
           label: "18:00 - 24:00",
         },
       ],
-      queryForm:{
+      queryForm: {
         fromStationCode: "", // 出发地车站编号
         toStationCode: "", // 目的地车站编号
         fromDate: "", // 出发日期
-        ticketType: "ADULT" // 车票类型
+        ticketType: "TICKETS", // 车票类型
       },
       rules: {
-        fromStationCode:{ required: true, message: "请选择出发地", trigger: "change" },
-        toStationCode: { required: true, message: "请选择目的地", trigger: "change" },
-        fromDate: { required: true, message: "请选择出发日期", trigger: "blur" },
+        fromStationCode: {
+          required: true,
+          message: "请选择出发地",
+          trigger: "change",
+        },
+        toStationCode: {
+          required: true,
+          message: "请选择目的地",
+          trigger: "change",
+        },
+        fromDate: {
+          required: true,
+          message: "请选择出发日期",
+          trigger: "blur",
+        },
       },
       sendTrainTimeValue: "", // 发车时间段
       trainCodeType: [], // 车次类型
-      toStation: [], // 出发车站
+      fromStation: [], // 出发车站
+      fromStationArray: [], // 所有出发车站
       // 控制台日志
       consoleLog:
         "2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n" +
         "2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n",
-      tableData: tableData.tableData, // table数据
+      tableData: [], // table数据
+      ticketArray: [], // 元数据
+      tabLoading: false,
+      tabTotal: 0,
     };
   },
   mounted() {
@@ -308,15 +334,193 @@ export default {
         this.stationOptions = data;
       }
     },
-    // 查询车票信息
-    async queryTicketInfo(queryForm){
-      this.$refs[queryForm].validate((flag)=>{
-        if(flag){
-          let params=this.queryForm;
-          console.log('查询参数:'+QS.stringify(params));
+    submitQueryForm(queryForm) {
+      this.$refs[queryForm].validate((flag) => {
+        if (flag) {
+          let params = this.queryForm;
+          this.queryTickets(params);
         }
-      })
-    }
+      });
+    },
+    // 查询车票信息
+    async queryTickets(params) {
+      this.tabLoading = true;
+      let { data, error } = await api.getTickets(params);
+      if (error) {
+        console.log(error);
+        this.tabLoading = false;
+      } else {
+        console.log(data);
+        let ticketArray = [];
+        if (data.ticketInfos) {
+          ticketArray = this.settingTicketInfo(data.ticketInfos);
+          this.tableData = ticketArray;
+          this.ticketArray = data.ticketInfos;
+          this.fromStationArray = data.fromStations;
+          console.log("fromStations:" + this.fromStationArray);
+          this.tabTotal = this.tableData.length;
+          this.tabLoading = false;
+        }
+      }
+    },
+    filterTrainInfo(type){
+      if(type==1){
+        this.filterTrainType();
+      }else{
+        this.filterFromStation();
+      }
+    },
+    // 过滤车次类型---------------------------------
+    filterTrainType() {
+      let trainType = this.trainCodeType;
+      console.log("选中的车次:" + trainType);
+      let fromStation = this.fromStation;
+      console.log("选中的出发站:" + fromStation);
+      let ticketInfos = []; // 过滤后的车票信息
+      if (trainType.length > 0) {
+        for (let ticketItem of this.ticketArray) {
+          for (let trainTypeItem of trainType) {
+            if (ticketItem.trainCode.indexOf(trainTypeItem) != -1) {
+              ticketInfos.push(ticketItem);
+            } else {
+              let trainCode=parseInt(ticketItem.trainCode);
+              if (!isNaN(trainCode) && trainTypeItem === 'O') {
+                console.log("其他车次:" + ticketItem.trainCode);
+                ticketInfos.push(ticketItem);
+              }
+            }
+          }
+        }
+      }
+
+      // 过滤出发站
+      if (fromStation.length > 0) {
+        let tempTicket=[];
+        for (let ticketItem of ticketInfos) {
+          for (let fromStationItem of fromStation) {
+            if (ticketItem.fromStationCode.indexOf(fromStationItem) != -1) {
+              tempTicket.push(ticketItem);
+            }
+          }
+        }
+         if(tempTicket.length>0){
+          ticketInfos=tempTicket;
+        }
+      }
+
+      if(fromStation.length > 0 && trainType.length<=0){
+        for (let ticketItem of this.ticketArray) {
+          for (let fromStationItem of fromStation) {
+            if (ticketItem.fromStationCode.indexOf(fromStationItem) != -1) {
+              ticketInfos.push(ticketItem);
+            }
+          }
+        }
+      }
+
+      if (trainType.length <= 0 && fromStation.length <= 0) {
+        // 如果过滤条件为空显示查询出的所有信息
+        ticketInfos = this.ticketArray;
+      }
+      this.tableData = this.settingTicketInfo(ticketInfos);
+      this.tabTotal = ticketInfos.length;
+    },
+    // 过滤出发车站---------------------------------
+    filterFromStation() {
+      let trainType = this.trainCodeType;
+      console.log("选中的车次:" + trainType);
+      let fromStation = this.fromStation;
+      console.log("选中的出发站:" + fromStation);
+      let ticketInfos = []; // 过滤后的车票信息
+      if (fromStation.length > 0) {
+        for (let ticketItem of this.ticketArray) {
+          for (let fromStationItem of fromStation) {
+            if (ticketItem.fromStationCode.indexOf(fromStationItem) != -1) {
+              ticketInfos.push(ticketItem);
+            }
+          }
+        }
+      }
+
+      // 过滤车次
+      if (trainType.length > 0) {
+        let tempTicket=[];
+        for (let ticketItem of ticketInfos) {
+          for (let trainTypeItem of trainType) {
+            if (ticketItem.trainCode.indexOf(trainTypeItem) != -1) {
+              tempTicket.push(ticketItem);
+            } else {
+              let trainCode=parseInt(ticketItem.trainCode);
+              if (!isNaN(trainCode) && trainTypeItem === 'O') {
+                console.log("其他车次:" + ticketItem.trainCode);
+                tempTicket.push(ticketItem);
+              }
+            }
+          }
+        }
+        if(tempTicket.length>0){
+          ticketInfos=tempTicket;
+        }
+      }
+
+      if (trainType.length > 0 && fromStation.length<=0) {
+        for (let ticketItem of this.ticketArray) {
+          for (let trainTypeItem of trainType) {
+            if (ticketItem.trainCode.indexOf(trainTypeItem) != -1) {
+              ticketInfos.push(ticketItem);
+            } else {
+              let trainCode=parseInt(ticketItem.trainCode);
+              if (!isNaN(trainCode) && trainTypeItem === 'O') {
+                console.log("其他车次:" + ticketItem.trainCode);
+                ticketInfos.push(ticketItem);
+              }
+            }
+          }
+        }
+      }
+
+      if (trainType.length <= 0 && fromStation.length <= 0) {
+        // 如果过滤条件为空显示查询出的所有信息
+        ticketInfos = this.ticketArray;
+      }
+      this.tableData = this.settingTicketInfo(ticketInfos);
+      this.tabTotal = ticketInfos.length;
+    },
+    // 格式化车票信息
+    settingTicketInfo(ticketInfos) {
+      let ticketArray = [];
+      if (ticketInfos.length > 0) {
+        for (let item of ticketInfos) {
+          let ticketInfo = {
+            trainCode: item.trainCode,
+            from_to_station: item.fromeStationName + " - " + item.toStationMame,
+            from_to_time: item.fromTime + " - " + item.toTime,
+            lastTime: item.lastTime,
+            businessSeatCount:
+              item.businessSeatCount == "" ? "--" : item.businessSeatCount,
+            firstSeatCount:
+              item.firstSeatCount == "" ? "--" : item.firstSeatCount,
+            secondSeatCount:
+              item.secondSeatCount == "" ? "--" : item.secondSeatCount,
+            highSoftSleepCount:
+              item.highSoftSleepCount == "" ? "--" : item.highSoftSleepCount,
+            softSleepCount:
+              item.softSleepCount == "" ? "--" : item.softSleepCount,
+            motorSleepCount:
+              item.motorSleepCount == "" ? "--" : item.motorSleepCount,
+            hardSleepCount:
+              item.hardSleepCount == "" ? "--" : item.hardSleepCount,
+            softSeatCount: item.softSeatCount == "" ? "--" : item.softSeatCount,
+            hardSeatCount: item.hardSeatCount == "" ? "--" : item.hardSeatCount,
+            noneSeatCount: item.noneSeatCount == "" ? "--" : item.noneSeatCount,
+            other: item.other == "" ? "--" : item.other,
+            remark: item.remark,
+          };
+          ticketArray.push(ticketInfo);
+        }
+      }
+      return ticketArray;
+    },
   },
 };
 </script>
@@ -343,13 +547,13 @@ export default {
 .select-style {
   width: 124px;
 }
-.select-date-style{
+.select-date-style {
   width: 150px;
 }
-.select-send-train-date-style{
+.select-send-train-date-style {
   width: 154px;
 }
-.radio-style{
+.radio-style {
   margin-right: 8px;
 }
 .query-form {
@@ -382,7 +586,7 @@ export default {
   margin-left: 35px;
 }
 .page-style {
-  text-align: right;
+  text-align: left;
   padding: 20px 0px;
 }
 .console-log {
