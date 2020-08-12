@@ -343,6 +343,7 @@ export default {
       let { data, error } = await api.getStations(params);
       if (error) {
         console.log(error);
+        Msg.errorMsg("加载车站信息失败",this);
       } else {
         this.stationOptions = data;
         Msg.successMsg("加载车站信息成功", this);
