@@ -81,10 +81,10 @@ export default {
         if (flag) {
           let param = this.loginForm;
           if (param.userName === "admin" && param.password === "123456") {
-            this.$message({
-              message: "登录成功",
-              type: "success",
-            });
+            // this.$message({
+            //   message: "登录成功",
+            //   type: "success",
+            // });
             this.$router.push({ name: "home" });
           } else {
             this.$message.error("用户名或密码错误!");

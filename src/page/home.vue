@@ -37,7 +37,7 @@
             <el-row>
               <el-col :span="24" style="text-align: left;">
                 <div style="margin-top:4px;">
-                  <label>当前时间:：2020-08-04 19:42:59</label>
+                  <label>当前时间：<span class="time-style">{{currentTime}}</span></label>
                 </div>
               </el-col>
             </el-row>
@@ -137,6 +137,7 @@
                   </el-form-item>
                   <el-form-item class="send-train-time" label="发车时间：">
                     <el-select
+                      @change="filterTicketByTime"
                       size="mini"
                       class="select-send-train-date-style"
                       v-model="sendTrainTimeValue"
@@ -147,7 +148,7 @@
                         v-for="item in sendTrainTimes"
                         :key="item.value"
                         :label="item.label"
-                        :value="item.value"
+                        :value="item.label"
                       ></el-option>
                     </el-select>
                   </el-form-item>
@@ -255,6 +256,7 @@
 import api from "../request/api";
 import tableData from "../assets/js/test";
 import QS from "qs";
+import Msg from "../assets/js/common";
 
 export default {
   name: "home",
@@ -264,7 +266,7 @@ export default {
       sendTrainTimes: [
         {
           value: "1",
-          label: "00:00 - 24:00",
+          label: "00:00 - 23:59",
         },
         {
           value: "2",
@@ -280,7 +282,7 @@ export default {
         },
         {
           value: "5",
-          label: "18:00 - 24:00",
+          label: "18:00 - 23:59",
         },
       ],
       queryForm: {
@@ -318,10 +320,21 @@ export default {
       ticketArray: [], // 元数据
       tabLoading: false,
       tabTotal: 0,
+      currentTime:"",// 当前时间
+      timeId:""
     };
   },
   mounted() {
     this.getStations();
+    this.timeId=setInterval(() => {
+      this.getCurrentDateTime();
+    }, 1000);
+  },
+  beforeDestroy:function(){
+    // 实力销毁前清除定时器
+    if(this.timeId){
+      clearInterval(this.timeId);
+    }
   },
   methods: {
     // 获取车站信息
@@ -332,6 +345,7 @@ export default {
         console.log(error);
       } else {
         this.stationOptions = data;
+        Msg.successMsg("加载车站信息成功", this);
       }
     },
     submitQueryForm(queryForm) {
@@ -363,10 +377,10 @@ export default {
         }
       }
     },
-    filterTrainInfo(type){
-      if(type==1){
+    filterTrainInfo(type) {
+      if (type == 1) {
         this.filterTrainType();
-      }else{
+      } else {
         this.filterFromStation();
       }
     },
@@ -383,8 +397,8 @@ export default {
             if (ticketItem.trainCode.indexOf(trainTypeItem) != -1) {
               ticketInfos.push(ticketItem);
             } else {
-              let trainCode=parseInt(ticketItem.trainCode);
-              if (!isNaN(trainCode) && trainTypeItem === 'O') {
+              let trainCode = parseInt(ticketItem.trainCode);
+              if (!isNaN(trainCode) && trainTypeItem === "O") {
                 console.log("其他车次:" + ticketItem.trainCode);
                 ticketInfos.push(ticketItem);
               }
@@ -395,7 +409,7 @@ export default {
 
       // 过滤出发站
       if (fromStation.length > 0) {
-        let tempTicket=[];
+        let tempTicket = [];
         for (let ticketItem of ticketInfos) {
           for (let fromStationItem of fromStation) {
             if (ticketItem.fromStationCode.indexOf(fromStationItem) != -1) {
@@ -403,12 +417,12 @@ export default {
             }
           }
         }
-         if(tempTicket.length>0){
-          ticketInfos=tempTicket;
+        if (tempTicket.length > 0) {
+          ticketInfos = tempTicket;
         }
       }
 
-      if(fromStation.length > 0 && trainType.length<=0){
+      if (fromStation.length > 0 && trainType.length <= 0) {
         for (let ticketItem of this.ticketArray) {
           for (let fromStationItem of fromStation) {
             if (ticketItem.fromStationCode.indexOf(fromStationItem) != -1) {
@@ -444,33 +458,33 @@ export default {
 
       // 过滤车次
       if (trainType.length > 0) {
-        let tempTicket=[];
+        let tempTicket = [];
         for (let ticketItem of ticketInfos) {
           for (let trainTypeItem of trainType) {
             if (ticketItem.trainCode.indexOf(trainTypeItem) != -1) {
               tempTicket.push(ticketItem);
             } else {
-              let trainCode=parseInt(ticketItem.trainCode);
-              if (!isNaN(trainCode) && trainTypeItem === 'O') {
+              let trainCode = parseInt(ticketItem.trainCode);
+              if (!isNaN(trainCode) && trainTypeItem === "O") {
                 console.log("其他车次:" + ticketItem.trainCode);
                 tempTicket.push(ticketItem);
               }
             }
           }
         }
-        if(tempTicket.length>0){
-          ticketInfos=tempTicket;
+        if (tempTicket.length > 0) {
+          ticketInfos = tempTicket;
         }
       }
 
-      if (trainType.length > 0 && fromStation.length<=0) {
+      if (trainType.length > 0 && fromStation.length <= 0) {
         for (let ticketItem of this.ticketArray) {
           for (let trainTypeItem of trainType) {
             if (ticketItem.trainCode.indexOf(trainTypeItem) != -1) {
               ticketInfos.push(ticketItem);
             } else {
-              let trainCode=parseInt(ticketItem.trainCode);
-              if (!isNaN(trainCode) && trainTypeItem === 'O') {
+              let trainCode = parseInt(ticketItem.trainCode);
+              if (!isNaN(trainCode) && trainTypeItem === "O") {
                 console.log("其他车次:" + ticketItem.trainCode);
                 ticketInfos.push(ticketItem);
               }
@@ -521,6 +535,91 @@ export default {
       }
       return ticketArray;
     },
+    // 时间筛选车票信息
+    filterTicketByTime() {
+      let selectTime = this.sendTrainTimeValue;
+      if (selectTime) {
+        let timeArray = selectTime.split("-");
+        if (this.queryForm.fromDate) {
+          if (this.tableData.length <= 0) {
+            Msg.warningMsg("没有可筛选的数据，请先查询", this);
+            return false;
+          }
+          let sendStartTrainDate =
+            this.queryForm.fromDate + " " + timeArray[0].trim(); // 发车开始日期
+          let sendEndTrainDate =
+            this.queryForm.fromDate + " " + timeArray[1].trim(); // 发车结束日期
+          let ticketArray = [];
+
+          if (this.trainCodeType.length <= 0 && this.fromStation.length <= 0) {
+            // 按照全部数据筛选
+            for (let ticket of this.ticketArray) {
+              let sendTrainDate =
+                this.queryForm.fromDate + " " + ticket.fromTime.trim();
+              let flag = this.isDuringDate(
+                sendTrainDate,
+                sendStartTrainDate,
+                sendEndTrainDate
+              );
+              if (flag) {
+                ticketArray.push(ticket);
+              }
+            }
+            ticketArray = this.settingTicketInfo(ticketArray);
+          } else {
+            // 按照当前数据筛选
+            for (let ticket of this.tableData) {
+              let fromToTime = ticket.from_to_time.split("-");
+              let sendTrainDate =
+                this.queryForm.fromDate + " " + fromToTime[0].trim();
+              let flag = this.isDuringDate(
+                sendTrainDate,
+                sendStartTrainDate,
+                sendEndTrainDate
+              );
+              if (flag) {
+                ticketArray.push(ticket);
+              }
+            }
+          }
+
+          if (ticketArray.length > 0) {
+            this.tableData = ticketArray;
+            this.tabTotal = ticketArray.length;
+          } else {
+            Msg.warningMsg("当前时间段没有出发车次", this);
+          }
+        } else {
+          Msg.warningMsg("出发日期未确定，无法进行数据筛选", this);
+          return false;
+        }
+      }
+    },
+    // 判断当前日期时间是否在范围内
+    isDuringDate(sendTrainDate, beginDateStr, endDateStr) {
+      let trainDate = new Date(sendTrainDate),
+        beginDate = new Date(beginDateStr),
+        endDate = new Date(endDateStr);
+      if (trainDate >= beginDate && trainDate <= endDate) {
+        return true;
+      }
+      return false;
+    },
+    getCurrentDateTime(){
+        var time = new Date(); //获得当前时间
+        var year = time.getFullYear(); //获得年
+        var month = time.getMonth()+1; //获月
+        var date = time.getDate(); //获得日
+        //获得小时、分钟、秒
+        var hour = time.getHours(); 
+        var minute = time.getMinutes();
+        var second = time.getSeconds();
+        if (minute < 10) //如果分钟只有1位，补0显示
+          minute = "0" + minute;
+        if (second < 10) //如果秒数只有1位，补0显示
+          second = "0" + second;
+        this.currentTime = year + "年" + month + "月" + date + "日 " + hour + ":" + minute + ":" +second;
+    }
   },
 };
 </script>
@@ -591,5 +690,9 @@ export default {
 }
 .console-log {
   margin-top: 6px;
+}
+.time-style{
+  color: #409EFF;
+  font-weight: bold;
 }
 </style>
