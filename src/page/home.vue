@@ -37,7 +37,10 @@
             <el-row>
               <el-col :span="24" style="text-align: left;">
                 <div style="margin-top:4px;">
-                  <label>当前时间：<span class="time-style">{{currentTime}}</span></label>
+                  <label>
+                    当前时间：
+                    <span class="time-style">{{currentTime}}</span>
+                  </label>
                 </div>
               </el-col>
             </el-row>
@@ -187,13 +190,7 @@
                 </el-row>
               </el-col>
               <el-col :span="12">
-                <el-progress
-                  class="progress"
-                  :text-inside="true"
-                  :stroke-width="18"
-                  :percentage="50"
-                  status="success"
-                ></el-progress>
+                <el-progress class="progress" :percentage="percentageVal" :stroke-width="10"></el-progress>
                 <el-row>
                   <el-col>
                     <el-input
@@ -320,19 +317,22 @@ export default {
       ticketArray: [], // 元数据
       tabLoading: false,
       tabTotal: 0,
-      currentTime:"",// 当前时间
-      timeId:""
+      percentageVal: 0, // 进度
+      percentageStartTimeId: "",
+      currentTime: "", // 当前时间
+      timeId: "",
     };
   },
   mounted() {
     this.getStations();
-    this.timeId=setInterval(() => {
+    this.percentageValTimer(5);
+    this.timeId = setInterval(() => {
       this.getCurrentDateTime();
     }, 1000);
   },
-  beforeDestroy:function(){
+  beforeDestroy: function () {
     // 实力销毁前清除定时器
-    if(this.timeId){
+    if (this.timeId) {
       clearInterval(this.timeId);
     }
   },
@@ -343,9 +343,9 @@ export default {
       let { data, error } = await api.getStations(params);
       if (error) {
         console.log(error);
-        Msg.errorMsg("加载车站信息失败",this);
+        Msg.errorMsg("加载车站信息失败", this);
       } else {
-        this.stationOptions = data;
+        this.stationOptions = data.data;
         Msg.successMsg("加载车站信息成功", this);
       }
     },
@@ -367,11 +367,11 @@ export default {
       } else {
         console.log(data);
         let ticketArray = [];
-        if (data.ticketInfos) {
-          ticketArray = this.settingTicketInfo(data.ticketInfos);
+        if (data.data.ticketInfos) {
+          ticketArray = this.settingTicketInfo(data.data.ticketInfos);
           this.tableData = ticketArray;
-          this.ticketArray = data.ticketInfos;
-          this.fromStationArray = data.fromStations;
+          this.ticketArray = data.data.ticketInfos;
+          this.fromStationArray = data.data.fromStations;
           console.log("fromStations:" + this.fromStationArray);
           this.tabTotal = this.tableData.length;
           this.tabLoading = false;
@@ -594,6 +594,9 @@ export default {
           Msg.warningMsg("出发日期未确定，无法进行数据筛选", this);
           return false;
         }
+      } else {
+        this.tableData = this.settingTicketInfo(this.ticketArray);
+        this.tabTotal = this.tableData.length;
       }
     },
     // 判断当前日期时间是否在范围内
@@ -606,21 +609,48 @@ export default {
       }
       return false;
     },
-    getCurrentDateTime(){
-        var time = new Date(); //获得当前时间
-        var year = time.getFullYear(); //获得年
-        var month = time.getMonth()+1; //获月
-        var date = time.getDate(); //获得日
-        //获得小时、分钟、秒
-        var hour = time.getHours(); 
-        var minute = time.getMinutes();
-        var second = time.getSeconds();
-        if (minute < 10) //如果分钟只有1位，补0显示
-          minute = "0" + minute;
-        if (second < 10) //如果秒数只有1位，补0显示
-          second = "0" + second;
-        this.currentTime = year + "年" + month + "月" + date + "日 " + hour + ":" + minute + ":" +second;
-    }
+    getCurrentDateTime() {
+      var time = new Date(); //获得当前时间
+      var year = time.getFullYear(); //获得年
+      var month = time.getMonth() + 1; //获月
+      var date = time.getDate(); //获得日
+      //获得小时、分钟、秒
+      var hour = time.getHours();
+      var minute = time.getMinutes();
+      var second = time.getSeconds();
+      if (minute < 10)
+        //如果分钟只有1位，补0显示
+        minute = "0" + minute;
+      if (second < 10)
+        //如果秒数只有1位，补0显示
+        second = "0" + second;
+      this.currentTime =
+        year +
+        "年" +
+        month +
+        "月" +
+        date +
+        "日 " +
+        hour +
+        ":" +
+        minute +
+        ":" +
+        second;
+    },
+    percentageValTimer(val) {
+      let that = this;
+      that.percentageVal = 0;
+      setTimeout(() => {
+        let timer = setInterval(() => {
+          if (that.percentageVal <100) {
+            that.percentageVal = that.percentageVal + 10;
+          } else {
+            that.percentageVal = 100;
+            clearInterval(timer);
+          }
+        }, (val * 1000 - 800) / 10);
+      }, 800);
+    },
   },
 };
 </script>
@@ -692,8 +722,8 @@ export default {
 .console-log {
   margin-top: 6px;
 }
-.time-style{
-  color: #409EFF;
+.time-style {
+  color: #409eff;
   font-weight: bold;
 }
 </style>
