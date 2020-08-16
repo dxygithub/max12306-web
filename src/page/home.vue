@@ -224,6 +224,7 @@
           border
           style="width: 100%"
           v-loading="tabLoading"
+          @row-dbclick="queryTicketPrice"
         >
           <el-table-column type="selection" width="55" align="center"></el-table-column>
           <el-table-column prop="trainCode" label="车次" width="100" align="center"></el-table-column>
@@ -242,16 +243,74 @@
           <el-table-column prop="noneSeatCount" label="无座" align="center"></el-table-column>
           <el-table-column prop="other" label="其他" align="center"></el-table-column>
           <el-table-column prop="remark" label="备注" align="center"></el-table-column>
+          <el-table-column label="操作">
+            <template slot-scope="scope">
+              <el-button round size="mini" @click="queryTicketPrice(scope.row)">查看票价</el-button>
+            </template>
+          </el-table-column>
         </el-table>
         <el-pagination background class="page-style" layout="total" :total="tabTotal"></el-pagination>
       </el-main>
     </el-container>
+
+    <el-dialog title="车票价格" :visible.sync="centerDialogVisible" width="30%" center>
+      <span style="font-weight: bold;">车次：{{ticketPrice.trainCode}}</span>
+      <br />
+      <br />
+      <br />
+      <span class="span-price">
+        商务座：
+        <span class="span-price-color">{{ticketPrice.businessSeatPrice}}</span>
+      </span>
+      <span class="span-price">
+        一等座：
+        <span class="span-price-color">{{ticketPrice.firstSeatPrice}}</span>
+      </span>
+      <span class="span-price">
+        二等座：
+        <span class="span-price-color">{{ticketPrice.secondSeatPrice}}</span>
+      </span>
+      <br />
+      <br />
+      <span class="span-price">
+        高级软卧：
+        <span class="span-price-color">{{ticketPrice.highSoftSleepPrice}}</span>
+      </span>
+      <span class="span-price">
+        软卧：
+        <span class="span-price-color">{{ticketPrice.softSleepPrice}}</span>
+      </span>
+      <span class="span-price">
+        硬卧：
+        <span class="span-price-color">{{ticketPrice.hardSleepPrice}}</span>
+      </span>
+      <br />
+      <br />
+      <span class="span-price">
+        动卧：
+        <span class="span-price-color">{{ticketPrice.motorSleepPrice}}</span>
+      </span>
+      <span class="span-price">
+        软座：
+        <span class="span-price-color">{{ticketPrice.softSeatPrice}}</span>
+      </span>
+      <span class="span-price">
+        硬座：
+        <span class="span-price-color">{{ticketPrice.hardSeatPrice}}</span>
+      </span>
+      <span class="span-price">
+        无座：
+        <span class="span-price-color">{{ticketPrice.noneSeatPrice}}</span>
+      </span>
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="centerDialogVisible = false">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
 <script>
 import api from "../request/api";
-import tableData from "../assets/js/test";
 import QS from "qs";
 import Msg from "../assets/js/common";
 
@@ -321,11 +380,27 @@ export default {
       percentageStartTimeId: "",
       currentTime: "", // 当前时间
       timeId: "",
+      centerDialogVisible: false,
+      ticketPrice: {
+        trainCode: "",
+        businessSeatPrice: "",
+        firstSeatPrice: "",
+        secondSeatPrice: "",
+        highSoftSleepPrice: "",
+        softSleepPrice: "",
+        motorSleepPrice: "",
+        hardSleepPrice: "",
+        softSeatPrice: "",
+        hardSeatPrice: "",
+        noneSeatPrice: "",
+      },
     };
   },
   mounted() {
     this.getStations();
-    this.percentageValTimer(5);
+    this.percentageStartTimeId = setInterval(() => {
+      this.percentageValTimer(5);
+    }, 5000);
     this.timeId = setInterval(() => {
       this.getCurrentDateTime();
     }, 1000);
@@ -334,6 +409,9 @@ export default {
     // 实力销毁前清除定时器
     if (this.timeId) {
       clearInterval(this.timeId);
+    }
+    if (this.percentageStartTimeId) {
+      clearInterval(this.percentageStartTimeId);
     }
   },
   methods: {
@@ -365,14 +443,14 @@ export default {
         console.log(error);
         this.tabLoading = false;
       } else {
-        console.log(data);
+        //console.log(data);
         let ticketArray = [];
         if (data.data.ticketInfos) {
           ticketArray = this.settingTicketInfo(data.data.ticketInfos);
           this.tableData = ticketArray;
           this.ticketArray = data.data.ticketInfos;
           this.fromStationArray = data.data.fromStations;
-          console.log("fromStations:" + this.fromStationArray);
+          //console.log("fromStations:" + this.fromStationArray);
           this.tabTotal = this.tableData.length;
           this.tabLoading = false;
         }
@@ -530,6 +608,10 @@ export default {
             noneSeatCount: item.noneSeatCount == "" ? "--" : item.noneSeatCount,
             other: item.other == "" ? "--" : item.other,
             remark: item.remark,
+            trainNo: item.trainNo,
+            fromStationNo: item.fromStationNo,
+            toStationNo: item.toStationNo,
+            seatTypes: item.seatType,
           };
           ticketArray.push(ticketInfo);
         }
@@ -640,16 +722,62 @@ export default {
     percentageValTimer(val) {
       let that = this;
       that.percentageVal = 0;
-      setTimeout(() => {
-        let timer = setInterval(() => {
-          if (that.percentageVal <100) {
-            that.percentageVal = that.percentageVal + 10;
-          } else {
-            that.percentageVal = 100;
-            clearInterval(timer);
-          }
-        }, (val * 1000 - 800) / 10);
-      }, 800);
+      let timer = setInterval(() => {
+        if (that.percentageVal < 100) {
+          that.percentageVal = that.percentageVal + 10;
+        } else {
+          that.percentageVal = 100;
+          clearInterval(timer);
+        }
+      }, (val * 1000 - 800) / 10);
+      // setTimeout(() => {
+
+      // }, 800);
+    },
+    async queryTicketPrice(row) {
+      let params = {
+        trainCode: row.trainCode,
+        trainNo: row.trainNo,
+        fromStationNo: row.fromStationNo,
+        toStationNo: row.toStationNo,
+        seatTypes: row.seatTypes,
+        trainDate: this.queryForm.fromDate,
+      };
+      let { data, error } = await api.getTicketPrice(params);
+      if (error) {
+        Msg.errorMsg(error, this);
+        return false;
+      } else {
+        // 清空票价信息
+        Object.keys(this.ticketPrice).forEach(
+          (key) => (this.ticketPrice[key] = "")
+        );
+        let price = {
+          trainCode: data.data.trainCode,
+          businessSeatPrice:
+            data.data.businessSeatPrice == null? "--": data.data.businessSeatPrice,
+          firstSeatPrice:
+            data.data.firstSeatPrice == null ? "--" : data.data.firstSeatPrice,
+          secondSeatPrice:
+            data.data.secondSeatPrice == null ? "--" : data.data.secondSeatPrice,
+          highSoftSleepPrice:
+            data.data.highSoftSleepPrice == null ? "--": data.data.highSoftSleepPrice,
+          softSleepPrice:
+            data.data.softSleepPrice == null ? "--" : data.data.softSleepPrice,
+          motorSleepPrice:
+            data.data.motorSleepPrice == null ? "--" : data.data.motorSleepPrice,
+          hardSleepPrice:
+            data.data.hardSleepPrice == null ? "--" : data.data.hardSleepPrice,
+          softSeatPrice:
+            data.data.softSeatPrice == null ? "--" : data.data.softSeatPrice,
+          hardSeatPrice:
+            data.data.hardSeatPrice == null ? "--" : data.data.hardSeatPrice,
+          noneSeatPrice:
+            data.data.noneSeatPrice == null ? "--" : data.data.noneSeatPrice,
+        };
+        this.ticketPrice = price;
+        this.centerDialogVisible = true;
+      }
     },
   },
 };
@@ -723,6 +851,14 @@ export default {
   margin-top: 6px;
 }
 .time-style {
+  color: #409eff;
+  font-weight: bold;
+}
+.span-price {
+  display: inline-block;
+  margin-right: 16px;
+}
+.span-price-color {
   color: #409eff;
   font-weight: bold;
 }

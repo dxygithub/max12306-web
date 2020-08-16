@@ -1,5 +1,6 @@
 import axios from 'axios';
 import QS from 'qs';
+import Msg from "../assets/js/common";
 
 // 请求超时时间
 axios.defaults.timeout = 10000;
@@ -28,7 +29,7 @@ axios.interceptors.response.use(
     response => {
         if (response.status === 200) {
             return Promise.resolve(response);
-        } else {
+        }else {
             return Promise.reject(response);
         }
     }
