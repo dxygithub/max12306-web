@@ -107,6 +107,7 @@
                       placeholder="选择日期"
                       format="yyyy年MM月dd日"
                       value-format="yyyy-MM-dd"
+                      :picker-options="pickerOptions"
                     ></el-date-picker>
                   </el-form-item>
 
@@ -394,6 +395,11 @@ export default {
         hardSeatPrice: "",
         noneSeatPrice: "",
       },
+      pickerOptions:{
+        disabledDate(time){
+          return time.getTime() < Date.now() - 8.64e7;
+        }
+      }
     };
   },
   mounted() {
@@ -778,7 +784,7 @@ export default {
         this.ticketPrice = price;
         this.centerDialogVisible = true;
       }
-    },
+    }
   },
 };
 </script>
