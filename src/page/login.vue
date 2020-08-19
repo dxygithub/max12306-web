@@ -9,7 +9,7 @@
         <el-input
           v-model="loginForm.userName"
           size="small"
-          @keyup.enter.native="userLogin('loginForm')"
+          @keyup.enter.native="loginSubmit('loginForm')"
           clearable
           placeholder="请输入用户名"
         />
@@ -18,64 +18,48 @@
         <el-input
           v-model="loginForm.password"
           size="small"
-          @keyup.enter.native="userLogin('loginForm')"
+          @keyup.enter.native="loginSubmit('loginForm')"
           clearable
           show-password
           placeholder="请输入密码"
         />
       </el-form-item>
-      <!-- <el-form-item label="JSESSIONID" prop="JSESSIONID">
-        <el-input
-          v-model="loginForm.JSESSIONID"
-          size="small"
-          @keyup.enter.native="userLogin('loginForm')"
-          clearable
-        />
-      </el-form-item>
-      <el-form-item label="RAIL_EXPIRATION" prop="RAIL_EXPIRATION">
-        <el-input
-          v-model="loginForm.RAIL_EXPIRATION"
-          size="small"
-          @keyup.enter.native="userLogin('loginForm')"
-          clearable
-        />
-      </el-form-item>
-      <el-form-item label="RAIL_DEVICEID" prop="RAIL_DEVICEID">
-        <el-input
-          v-model="loginForm.RAIL_DEVICEID"
-          size="small"
-          @keyup.enter.native="userLogin('loginForm')"
-          clearable
-        />
-      </el-form-item>-->
       <el-form-item>
-        <div>
-          <img :src="imgCapthcha" />
+        <!--图片验证码-->
+        <div class="wrap">
+          <img :src="imgCapthcha"/>
         </div>
       </el-form-item>
       <el-form-item>
-        <el-checkbox-group v-model="imgIndex">
-          <el-checkbox class="checkbox-color" label="1" key="1">1</el-checkbox>
-          <el-checkbox class="checkbox-color" label="2" key="2">2</el-checkbox>
-          <el-checkbox class="checkbox-color" label="3" key="3">3</el-checkbox>
-          <el-checkbox class="checkbox-color" label="4" key="4">4</el-checkbox>
-          <el-checkbox class="checkbox-color" label="5" key="5">5</el-checkbox>
-          <el-checkbox class="checkbox-color" label="6" key="6">6</el-checkbox>
-          <el-checkbox class="checkbox-color" label="7" key="7">7</el-checkbox>
-          <el-checkbox class="checkbox-color" label="8" key="8">8</el-checkbox>
-        </el-checkbox-group>
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary"  class="submit-btn" @click="userLogin('loginForm')">登录</el-button>
+        <el-button type="primary" class="submit-btn" @click="loginSubmit('loginForm')">登录</el-button>
         <!-- <el-button type="primary"  @click="checkImgCapthcha">校验验证码</el-button> -->
       </el-form-item>
     </el-form>
+
+    <!--滑块验证内容-->
+    <el-dialog
+      title="滑块验证"
+      :close-on-press-escape="false"
+      :close-on-click-modal="false"
+      :show-close="false"
+      :visible.sync="centerDialogVisible"
+      width="30%"
+      center
+    >
+      <div id="captcha"></div>
+      <!-- <span slot="footer" class="dialog-footer">
+        <el-button @click="centerDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="centerDialogVisible = false">确 定</el-button>
+      </span>-->
+    </el-dialog>
   </div>
 </template>
 <script>
 import api from "../request/api";
 import QS from "qs";
 import Msg from "../assets/js/common";
+import $ from "jquery";
+import SM4 from "../assets/js/SM4";
 
 export default {
   name: "login",
@@ -84,41 +68,54 @@ export default {
       loginForm: {
         userName: "",
         password: "",
-        JSESSIONID: "",
-        RAIL_EXPIRATION: "",
-        RAIL_DEVICEID: "",
       },
       rules: {
-        userName: [
-          { required: true, message: "请输入用户名称", trigger: "blur" },
-          { min: 2, max: 8, message: "长度在 2 到 8 个字符", trigger: "blur" },
-        ],
+        userName: { required: true, message: "请输入用户名称", trigger: "blur" },
         password: { required: true, message: "请输入密码", trigger: "blur" },
       },
       imgIndex: [],
       imgCapthcha: "",
-      jqueryCallBack:""
+      jqueryCallBack: "",
+      capthChaPos: [], // 验证码坐标位置
+      centerDialogVisible: false,
+      appKey: "FFFF0N000000000085DE", // appkey后期可能会变
+      scene: "nc_login",
+      appId: "otn",
+      SM4_key: "tiekeyuankp12306", // 加密字符串
+      loadingId: null
     };
   },
   created() {},
   mounted() {
-      this.getImgCapthcha();
+    // 提供jquery使用:_this
+    const _this = this;
+
+    this.getImgCapthcha();
+
+    $(".wrap").click(function (e) {
+      var radius = 0; //半径
+      var offset = $(this).offset();
+      var top = parseInt(e.pageY - offset.top - radius);
+      var left = parseInt(e.pageX - offset.left - radius);
+      $(".wrap").append(
+        '<div class="ball" style="top:' +
+          top +
+          "px;left:" +
+          left +
+          'px;"></div>'
+      );
+      //$('.container').html('<div class="ball" style="top:'+top+';left:'+left+'"></div>');
+      _this.capthChaPos.push(left + "," + top);
+      //console.log("选中的验证码坐标:"+_this.capthChaPos);
+    });
   },
   methods: {
-    userLogin(formName) {
+    loginSubmit(formName) {
       this.$refs[formName].validate((flag) => {
         if (flag) {
           let param = this.loginForm;
-          if (param.userName === "admin" && param.password === "123456") {
-            // this.$message({
-            //   message: "登录成功",
-            //   type: "success",
-            // });
-            //this.$router.push({ name: "home" });
-            this.checkImgCapthcha();
-          } else {
-            this.$message.error("用户名或密码错误!");
-          }
+          // 图片验证码校验
+          this.checkImgCapthcha();
         } else {
           console.log("请输入用户名和密码!");
           return false;
@@ -127,21 +124,37 @@ export default {
     },
     // 校验图片验证码
     async checkImgCapthcha() {
-      let tempArr=this.jqueryCallBack.split("_");
+      let tempArr = this.jqueryCallBack.split("_");
+      let captchaPos = this.capthChaPos;
+      if (captchaPos.length <= 0) {
+        Msg.errorMsg("请选择对应的验证码!", this);
+        return false;
+      }
       let params = {
-        imgIndex: "" + this.imgIndex,
-        timer:tempArr[1]
+        imgIndex: "" + captchaPos,
+        timer: tempArr[1],
       };
       let { data, error } = await api.checkCapthcha(params);
       if (error) {
         console.log(error);
         Msg.errorMsg("验证码校验失败", this);
       } else {
-        if (data.code === 200 && data.data=="4") {
+        if (data.code === 200 && data.data == "4") {
           Msg.successMsg("验证码校验通过", this);
-          this.$router.push({ name: "home" });
-        }else{
-          Msg.errorMsg(data.message,this);
+          // 清空点击标记
+          $(".ball").remove();
+          // 清空坐标数组
+          this.capthChaPos = [];
+          // 初始化滑块验证
+          this.initSalisPassPort();
+        } else {
+          Msg.errorMsg(data.message, this);
+          // 清空点击标记
+          $(".ball").remove();
+          // 清空坐标数组
+          this.capthChaPos = [];
+          // 重新获取验证码
+          this.getImgCapthcha();
         }
       }
     },
@@ -153,9 +166,139 @@ export default {
         console.log(error);
         Msg.errorMsg("获取验证码失败", this);
       } else {
-        this.jqueryCallBack=data.data[0];
+        this.jqueryCallBack = data.data[0];
         this.imgCapthcha = "data:image/jpg;base64," + data.data[1];
         Msg.successMsg("验证码加载成功", this);
+      }
+    },
+    // 初始化滑块验证
+    async initSalisPassPort() {
+      let params = {
+        appid: "otn",
+        username: this.loginForm.userName,
+        slideMode: "0",
+      };
+      let { data, error } = await api.initSlidePassport(params);
+      if (error) {
+        console.log(error);
+        Msg.errorMsg("初始化滑块验证失败", this);
+      } else {
+        let nc_token = data.data;
+        if (nc_token) {
+          this.getSlidePasscode(nc_token);
+        } else {
+          Msg.errorMsg("初始化滑块验证失败", this);
+        }
+      }
+    },
+    // 调用滑块
+    getSlidePasscode(nc_token) {
+      this.centerDialogVisible = true;
+      // 等待弹出层渲染完毕再进行调用滑块
+      this.$nextTick(() => {
+        let that = this;
+        let nc = NoCaptcha.init({
+          renderTo: "#captcha",
+          appkey: that.appKey,
+          scene: that.scene,
+          token: nc_token,
+          customWidth: 340,
+          trans: { key1: "code0" },
+          elementID: ["usernameID"],
+          is_Opt: 0,
+          language: "zh",
+          isEnabled: true,
+          timeout: 3000,
+          times: 5,
+          apimap: {},
+          bannerHidden: false,
+          initHidden: false,
+          callback: function (data) {
+            let csessionid = data.csessionid;
+            let sig = data.sig;
+            if (csessionid && sig) {
+              console.log("csessionid:" + csessionid);
+              console.log("sig:" + sig);
+              Msg.successMsg("滑块验证通过", that);
+              that.centerDialogVisible = false;
+            }
+            // 统一认证登录 + 滑动验证
+            var formData = {};
+            formData["sessionId"] = csessionid;
+            formData["sig"] = sig;
+            formData["ifCheckSlidePasscodeToken"] = nc_token;
+            formData["scene"] = that.scene;
+            formData["tk"] = ""; // apptk_tmp_control此处暂时为空
+            formData["username"] = that.loginForm.userName;
+            debugger
+            formData["password"] = "@" + SM4.encrypt_ecb(that.loginForm.password, that.SM4_key);
+            formData["appid"] = "otn"; // popup_passport_appId
+            that.userPassPortUamtk();
+            //that.userLogin(formData);
+          },
+          error: function (s) {
+            console.log(s);
+          },
+        });
+        NoCaptcha.setEnabled(true);
+        nc.reset(); //请务必确保这里调用一次reset()方法
+        NoCaptcha.upLang("zh", {
+          LOADING: "加载中...", //加载
+          SLIDER_LABEL: "请按住滑块，拖动到最右边，完成登录", //等待滑动
+          CHECK_Y: "验证通过", //通过
+          ERROR_TITLE: "非常抱歉，这出错了...", //拦截
+          CHECK_N: "验证未通过", //准备唤醒二次验证
+          OVERLAY_INFORM: "经检测你当前操作环境存在风险，请输入验证码", //二次验证
+          TIPS_TITLE: "验证码错误，请重新输入", //验证码输错时的提示
+        });
+      });
+    },
+    // 用户登录
+    async userLogin(formData) {
+      this.loadingId = Msg.loading("登录中...",this);
+      let params = formData;
+      let { data, error } = await api.userLogin(params);
+      if (error) {
+        console.log(error);
+        Msg.errorMsg("登录失败", this);
+      } else {
+        if (data.code === 200 && data.data != "5") {
+          // 关闭遮罩层
+          this.loadingId.close();
+          console.log("======> 登录成功...");
+          // 本地保存用户名和uamtk
+          localStorage.setItem("username", this.loginForm.userName);
+          localStorage.setItem(this.loginForm.userName + "uamtk", data.data);
+          // 登录成功后需要认证
+          // this.userPassPortUamtk();
+          // 登录流程结束，进入home页面
+          this.$router.push({ name: "home" });
+        } else {
+          Msg.errorMsg(data.message, this);
+          // 重新尝试登录
+          location.reload();
+        }
+      }
+    },
+    // 用户认证
+    async userPassPortUamtk() {
+      let params = {
+        appId: this.appId,
+      };
+      let { data, error } = await api.userPassPortUamtk(params);
+      if (error) {
+        console.log(error);
+        Msg.errorMsg("登录失败", this);
+      } else {
+        if (data.code === 200 && data.data != "5") {
+          console.log("======> 认证成功...");
+          // 本地保存apptk
+          localStorage.setItem(this.loginForm.userName + "apptk", data.data);
+        }else{
+          Msg.errorMsg(data.message,this);
+          // 重新尝试登录
+          location.reload();
+        }
       }
     },
   },
@@ -190,5 +333,18 @@ export default {
 }
 .checkbox-color {
   color: #ffffff;
+}
+.wrap {
+  width: 293px;
+  height: 190px;
+  background: #ccc;
+  position: relative;
+}
+.wrap /deep/ .ball {
+  width: 20px;
+  height: 20px;
+  background: springgreen;
+  border-radius: 50%;
+  position: absolute;
 }
 </style>

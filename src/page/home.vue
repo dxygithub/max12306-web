@@ -244,7 +244,7 @@
           <el-table-column prop="noneSeatCount" label="无座" align="center"></el-table-column>
           <el-table-column prop="other" label="其他" align="center"></el-table-column>
           <el-table-column prop="remark" label="备注" align="center"></el-table-column>
-          <el-table-column label="操作">
+          <el-table-column label="操作" align="center">
             <template slot-scope="scope">
               <el-button round size="mini" @click="queryTicketPrice(scope.row)">查看票价</el-button>
             </template>

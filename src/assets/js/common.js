@@ -4,7 +4,7 @@
 // 消息提示
 
 // 成功提示
-function successMsg(message,obj){
+function successMsg(message, obj) {
     obj.$message({
         message: message,
         type: 'success'
@@ -12,7 +12,7 @@ function successMsg(message,obj){
 }
 
 // 警告提示
-function warningMsg(message,obj){
+function warningMsg(message, obj) {
     obj.$message({
         message: message,
         type: 'warning'
@@ -21,12 +21,26 @@ function warningMsg(message,obj){
 
 
 // 错误提示
-function errorMsg(message,obj){
+function errorMsg(message, obj) {
     obj.$message.error(message);
 }
 
-export default{
+
+// 页面加载遮罩层
+
+function loading(loading_text, obj) {
+    const loadingId = obj.$loading({
+        lock: true,
+        text: loading_text,
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)'
+    });
+    return loadingId;
+}
+
+export default {
     successMsg,
     warningMsg,
-    errorMsg
+    errorMsg,
+    loading
 }

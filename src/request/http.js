@@ -8,6 +8,9 @@ axios.defaults.timeout = 10000;
 // 默认请求地址
 axios.defaults.baseURL = '/api';
 
+// 跨域设置cookie
+axios.defaults.withCredentials = true;
+
 // 默认请求头设置
 axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
 
