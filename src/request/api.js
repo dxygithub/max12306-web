@@ -24,6 +24,12 @@ const userLogin = params => api.post('/max/userLogin', params);
 // 用户认证
 const userPassPortUamtk = params => api.post('/max/passPortUamtk', params);
 
+// 获取用户名
+const getUserName=params=>api.post('/max/getUserName',params);
+
+// 用户退出
+const userLoginOut=params=>api.get('/max/userLoginOut',params);
+
 export default {
     getStations,
     getTickets,
@@ -32,5 +38,7 @@ export default {
     checkCapthcha,
     initSlidePassport,
     userLogin,
-    userPassPortUamtk
+    userPassPortUamtk,
+    getUserName,
+    userLoginOut
 }

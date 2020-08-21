@@ -38,9 +38,23 @@ function loading(loading_text, obj) {
     return loadingId;
 }
 
+// messageBox弹框
+function confirm(text, title, fun, obj) {
+    obj.$confirm(text, title, {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+    }).then(() => {
+        fun();
+    }).catch(() => {
+        
+    });
+}
+
 export default {
     successMsg,
     warningMsg,
     errorMsg,
-    loading
+    loading,
+    confirm
 }

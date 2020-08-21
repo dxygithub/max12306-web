@@ -18,7 +18,7 @@
             <el-row>
               <el-col :span="8" style="text-align: left;">
                 <div style="margin-top:10px;">
-                  <label>杜晓宇，你好</label>
+                  <label>{{userName}}，你好</label>
                 </div>
               </el-col>
               <el-col :span="8">
@@ -30,6 +30,7 @@
                   width="40"
                   height="40"
                   title="退出"
+                  @click="submitLoginOut"
                   class="login-out"
                 />
               </el-col>
@@ -313,7 +314,7 @@
 <script>
 import api from "../request/api";
 import QS from "qs";
-import Msg from "../assets/js/common";
+// import Msg from "../assets/js/common";
 
 export default {
   name: "home",
@@ -395,14 +396,23 @@ export default {
         hardSeatPrice: "",
         noneSeatPrice: "",
       },
-      pickerOptions:{
-        disabledDate(time){
+      pickerOptions: {
+        disabledDate(time) {
           return time.getTime() < Date.now() - 8.64e7;
-        }
-      }
+        },
+      },
+      userName: "", // 用户名
     };
   },
   mounted() {
+    let apptk = localStorage.getItem(
+      localStorage.getItem("username") + "apptk"
+    );
+    if(!apptk){
+      this.$router.push({ name: "/" });
+      return false;
+    }
+    this.getUserName();// 获取用户名
     this.getStations();
     this.percentageStartTimeId = setInterval(() => {
       this.percentageValTimer(5);
@@ -427,10 +437,10 @@ export default {
       let { data, error } = await api.getStations(params);
       if (error) {
         console.log(error);
-        Msg.errorMsg("加载车站信息失败", this);
+        this.$common.errorMsg("加载车站信息失败", this);
       } else {
         this.stationOptions = data.data;
-        Msg.successMsg("加载车站信息成功", this);
+        this.$common.successMsg("加载车站信息成功", this);
       }
     },
     submitQueryForm(queryForm) {
@@ -631,7 +641,7 @@ export default {
         let timeArray = selectTime.split("-");
         if (this.queryForm.fromDate) {
           if (this.tableData.length <= 0) {
-            Msg.warningMsg("没有可筛选的数据，请先查询", this);
+            this.$common.warningMsg("没有可筛选的数据，请先查询", this);
             return false;
           }
           let sendStartTrainDate =
@@ -676,10 +686,10 @@ export default {
             this.tableData = ticketArray;
             this.tabTotal = ticketArray.length;
           } else {
-            Msg.warningMsg("当前时间段没有出发车次", this);
+            this.$common.warningMsg("当前时间段没有出发车次", this);
           }
         } else {
-          Msg.warningMsg("出发日期未确定，无法进行数据筛选", this);
+          this.$common.warningMsg("出发日期未确定，无法进行数据筛选", this);
           return false;
         }
       } else {
@@ -751,7 +761,7 @@ export default {
       };
       let { data, error } = await api.getTicketPrice(params);
       if (error) {
-        Msg.errorMsg(error, this);
+        this.$common.errorMsg(error, this);
         return false;
       } else {
         // 清空票价信息
@@ -761,17 +771,25 @@ export default {
         let price = {
           trainCode: data.data.trainCode,
           businessSeatPrice:
-            data.data.businessSeatPrice == null? "--": data.data.businessSeatPrice,
+            data.data.businessSeatPrice == null
+              ? "--"
+              : data.data.businessSeatPrice,
           firstSeatPrice:
             data.data.firstSeatPrice == null ? "--" : data.data.firstSeatPrice,
           secondSeatPrice:
-            data.data.secondSeatPrice == null ? "--" : data.data.secondSeatPrice,
+            data.data.secondSeatPrice == null
+              ? "--"
+              : data.data.secondSeatPrice,
           highSoftSleepPrice:
-            data.data.highSoftSleepPrice == null ? "--": data.data.highSoftSleepPrice,
+            data.data.highSoftSleepPrice == null
+              ? "--"
+              : data.data.highSoftSleepPrice,
           softSleepPrice:
             data.data.softSleepPrice == null ? "--" : data.data.softSleepPrice,
           motorSleepPrice:
-            data.data.motorSleepPrice == null ? "--" : data.data.motorSleepPrice,
+            data.data.motorSleepPrice == null
+              ? "--"
+              : data.data.motorSleepPrice,
           hardSleepPrice:
             data.data.hardSleepPrice == null ? "--" : data.data.hardSleepPrice,
           softSeatPrice:
@@ -784,7 +802,51 @@ export default {
         this.ticketPrice = price;
         this.centerDialogVisible = true;
       }
-    }
+    },
+    async getUserName() {
+      let apptk = localStorage.getItem(
+        localStorage.getItem("username") + "apptk"
+      );
+      let params = {
+        tk: apptk,
+      };
+      let { data, error } = await api.getUserName(params);
+      if (error) {
+        this.$common.errorMsg(error, this);
+        return false;
+      } else {
+        if (data.code === 200 && data.data != "5") {
+          this.$common.successMsg("获取用户名成功", this);
+          this.userName = data.data;
+        } else {
+          this.$common.errorMsg(data.message, this);
+          localStorage.removeItem(localStorage.getItem("username") + "apptk");
+          this.$common.confirm(
+            "您的会话已过期或登录状态异常，请重新登录",
+            "登录状态异常",
+            () => {
+              this.$router.push({ name: "/" });
+            },
+            this
+          );
+        }
+      }
+    },
+    submitLoginOut() {
+      this.$common.confirm("确定要退出吗？", "用户退出", this.loginOut, this);
+    },
+    async loginOut() {
+      let params = {};
+      let { data, error } = await api.userLoginOut(params);
+      if (error) {
+        this.$common.errorMsg(error, this);
+        return false;
+      } else {
+        localStorage.removeItem(localStorage.getItem("username") + "apptk");
+        this.$common.successMsg(data.message, this);
+        this.$router.push({ name: "/" });
+      }
+    },
   },
 };
 </script>

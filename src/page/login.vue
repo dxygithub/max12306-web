@@ -3,7 +3,7 @@
     <div class="background">
       <img src="../assets/image/080538219e14a50979b3fadafce70d22.jpg" />
     </div>
-    <h1 class="head-title">Max</h1>
+    <h1 class="head-title">12306 - Max</h1>
     <el-form :model="loginForm" :rules="rules" ref="loginForm" class="login-form">
       <el-form-item label="用户名" prop="userName" class="item-label">
         <el-input
@@ -27,7 +27,7 @@
       <el-form-item>
         <!--图片验证码-->
         <div class="wrap">
-          <img :src="imgCapthcha"/>
+          <img :src="imgCapthcha" />
         </div>
       </el-form-item>
       <el-form-item>
@@ -57,7 +57,7 @@
 <script>
 import api from "../request/api";
 import QS from "qs";
-import Msg from "../assets/js/common";
+// import Msg from "../assets/js/common";
 import $ from "jquery";
 import SM4 from "../assets/js/SM4";
 
@@ -70,7 +70,11 @@ export default {
         password: "",
       },
       rules: {
-        userName: { required: true, message: "请输入用户名称", trigger: "blur" },
+        userName: {
+          required: true,
+          message: "请输入用户名称",
+          trigger: "blur",
+        },
         password: { required: true, message: "请输入密码", trigger: "blur" },
       },
       imgIndex: [],
@@ -82,7 +86,8 @@ export default {
       scene: "nc_login",
       appId: "otn",
       SM4_key: "tiekeyuankp12306", // 加密字符串
-      loadingId: null
+      loadingId: null,
+      autoCheck: true, // 图片验证码是否自动识别
     };
   },
   created() {},
@@ -126,10 +131,13 @@ export default {
     async checkImgCapthcha() {
       let tempArr = this.jqueryCallBack.split("_");
       let captchaPos = this.capthChaPos;
-      if (captchaPos.length <= 0) {
-        Msg.errorMsg("请选择对应的验证码!", this);
-        return false;
+      if (!this.autoCheck) {
+        if (captchaPos.length <= 0) {
+          this.$common.errorMsg("请选择对应的验证码!", this);
+          return false;
+        }
       }
+
       let params = {
         imgIndex: "" + captchaPos,
         timer: tempArr[1],
@@ -137,10 +145,10 @@ export default {
       let { data, error } = await api.checkCapthcha(params);
       if (error) {
         console.log(error);
-        Msg.errorMsg("验证码校验失败", this);
+        this.$common.errorMsg("验证码校验失败", this);
       } else {
         if (data.code === 200 && data.data == "4") {
-          Msg.successMsg("验证码校验通过", this);
+          this.$common.successMsg("验证码校验通过", this);
           // 清空点击标记
           $(".ball").remove();
           // 清空坐标数组
@@ -148,7 +156,7 @@ export default {
           // 初始化滑块验证
           this.initSalisPassPort();
         } else {
-          Msg.errorMsg(data.message, this);
+          this.$common.errorMsg(data.message, this);
           // 清空点击标记
           $(".ball").remove();
           // 清空坐标数组
@@ -164,11 +172,11 @@ export default {
       let { data, error } = await api.getImgCapthcha(params);
       if (error) {
         console.log(error);
-        Msg.errorMsg("获取验证码失败", this);
+        this.$common.errorMsg("获取验证码失败", this);
       } else {
         this.jqueryCallBack = data.data[0];
         this.imgCapthcha = "data:image/jpg;base64," + data.data[1];
-        Msg.successMsg("验证码加载成功", this);
+        this.$common.successMsg("验证码加载成功", this);
       }
     },
     // 初始化滑块验证
@@ -181,13 +189,13 @@ export default {
       let { data, error } = await api.initSlidePassport(params);
       if (error) {
         console.log(error);
-        Msg.errorMsg("初始化滑块验证失败", this);
+        this.$common.errorMsg("初始化滑块验证失败", this);
       } else {
         let nc_token = data.data;
         if (nc_token) {
           this.getSlidePasscode(nc_token);
         } else {
-          Msg.errorMsg("初始化滑块验证失败", this);
+          this.$common.errorMsg("初始化滑块验证失败", this);
         }
       }
     },
@@ -219,7 +227,7 @@ export default {
             if (csessionid && sig) {
               console.log("csessionid:" + csessionid);
               console.log("sig:" + sig);
-              Msg.successMsg("滑块验证通过", that);
+              that.$common.successMsg("滑块验证通过", that);
               that.centerDialogVisible = false;
             }
             // 统一认证登录 + 滑动验证
@@ -230,11 +238,11 @@ export default {
             formData["scene"] = that.scene;
             formData["tk"] = ""; // apptk_tmp_control此处暂时为空
             formData["username"] = that.loginForm.userName;
-            debugger
-            formData["password"] = "@" + SM4.encrypt_ecb(that.loginForm.password, that.SM4_key);
+            formData["password"] =
+              "@" + SM4.encrypt_ecb(that.loginForm.password, that.SM4_key);
             formData["appid"] = "otn"; // popup_passport_appId
-            that.userPassPortUamtk();
-            //that.userLogin(formData);
+            //that.userPassPortUamtk();
+            that.userLogin(formData);
           },
           error: function (s) {
             console.log(s);
@@ -255,49 +263,54 @@ export default {
     },
     // 用户登录
     async userLogin(formData) {
-      this.loadingId = Msg.loading("登录中...",this);
+      this.loadingId = this.$common.loading("登录中...", this);
       let params = formData;
       let { data, error } = await api.userLogin(params);
+      // 关闭遮罩层
+      this.loadingId.close();
       if (error) {
         console.log(error);
-        Msg.errorMsg("登录失败", this);
+        this.$common.errorMsg("登录失败", this);
       } else {
         if (data.code === 200 && data.data != "5") {
-          // 关闭遮罩层
-          this.loadingId.close();
           console.log("======> 登录成功...");
           // 本地保存用户名和uamtk
           localStorage.setItem("username", this.loginForm.userName);
           localStorage.setItem(this.loginForm.userName + "uamtk", data.data);
           // 登录成功后需要认证
-          // this.userPassPortUamtk();
+          this.userPassPortUamtk();
           // 登录流程结束，进入home页面
-          this.$router.push({ name: "home" });
+          // this.$router.push({ name: "home" });
         } else {
-          Msg.errorMsg(data.message, this);
+          this.$common.errorMsg(data.message, this);
           // 重新尝试登录
-          location.reload();
+          // location.reload();
         }
       }
     },
     // 用户认证
     async userPassPortUamtk() {
+      let local_uamtk = localStorage.getItem(
+        localStorage.getItem("username") + "uamtk"
+      );
       let params = {
         appId: this.appId,
+        uamtk: local_uamtk,
       };
       let { data, error } = await api.userPassPortUamtk(params);
       if (error) {
         console.log(error);
-        Msg.errorMsg("登录失败", this);
+        this.$common.errorMsg("登录失败", this);
       } else {
         if (data.code === 200 && data.data != "5") {
           console.log("======> 认证成功...");
           // 本地保存apptk
           localStorage.setItem(this.loginForm.userName + "apptk", data.data);
-        }else{
-          Msg.errorMsg(data.message,this);
+          this.$router.push({ name: "home" });
+        } else {
+          this.$common.errorMsg(data.message, this);
           // 重新尝试登录
-          location.reload();
+          // location.reload();
         }
       }
     },
