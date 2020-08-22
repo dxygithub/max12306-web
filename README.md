@@ -1,12 +1,14 @@
-# y
+# max12306-web
 
-> y
+> max12306-web
 
 ## Build Setup
 
 ``` bash
 # install dependencies
 npm install
+
+npm install jquery
 
 # serve with hot reload at localhost:8080
 npm run dev
