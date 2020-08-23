@@ -6,7 +6,7 @@
           <el-col :span="4">
             <div class="top-left">
               <el-button type="primary">我的订单</el-button>
-              <el-button type="primary">联系人</el-button>
+              <el-button type="primary" @click="getPassengers">乘车人</el-button>
             </div>
           </el-col>
           <el-col :span="15">
@@ -255,6 +255,7 @@
       </el-main>
     </el-container>
 
+    <!--车票价格-->
     <el-dialog title="车票价格" :visible.sync="centerDialogVisible" width="30%" center>
       <span style="font-weight: bold;">车次：{{ticketPrice.trainCode}}</span>
       <br />
@@ -306,6 +307,28 @@
       </span>
       <span slot="footer" class="dialog-footer">
         <el-button type="primary" @click="centerDialogVisible = false">确 定</el-button>
+      </span>
+    </el-dialog>
+
+
+    <!--乘车人-->
+    <el-dialog title="乘车人信息" :visible.sync="passengersDiaVis" width="50%" center>
+      <el-table @row-dbclick="delPassenger" stripe border style="width: 100%" :data="passengersData">
+        <el-table-column prop="id" label="序号" type="index" :index="indexMethod" align="center"></el-table-column>
+        <el-table-column prop="passengerName" label="姓名" align="center"></el-table-column>
+        <el-table-column prop="passengeridTypeName" label="证件类型" align="center"></el-table-column>
+        <el-table-column prop="passengerIdNo" label="证件号码" align="center"></el-table-column>
+        <el-table-column prop="mobileNo" label="手机/电话" align="center"></el-table-column>
+        <el-table-column prop="passengerTypeName" label="旅客类型" align="center"></el-table-column>
+        <el-table-column label="操作" align="center">
+           <template slot-scope="scope">
+              <el-button round size="mini" @click="delPassenger(scope.row)">删除</el-button>
+            </template>
+        </el-table-column>
+      </el-table>
+      <el-pagination style="text-align: right;padding: 20px 0px;" background layout="total, prev, pager, next" :total="passengersTotal"></el-pagination>
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="passengersDiaVis = false">确 定</el-button>
       </span>
     </el-dialog>
   </div>
@@ -383,6 +406,7 @@ export default {
       currentTime: "", // 当前时间
       timeId: "",
       centerDialogVisible: false,
+      passengersDiaVis: false,
       ticketPrice: {
         trainCode: "",
         businessSeatPrice: "",
@@ -402,6 +426,8 @@ export default {
         },
       },
       userName: "", // 用户名
+      passengersData:[], // 乘车人信息
+      passengersTotal:0
     };
   },
   mounted() {
@@ -831,6 +857,47 @@ export default {
           );
         }
       }
+    },
+    // 获取乘车人信息
+    async getPassengers(){
+      let params = {};
+      let {data,error} = await api.getPassengers(params);
+      if(error){
+        this.$common.errorMsg(error, this);
+        return false;
+      }else{
+        this.passengersData=data.data;
+        this.passengersTotal=this.passengersData.length;
+        this.passengersDiaVis=true;
+      }
+    },
+    // 删除乘车人
+    delPassenger(row){
+      this.$common.confirm("确定删除当前乘车人吗？","删除乘车人",async (row)=>{
+        let params={
+        isUserSelf: row.isUserSelf,
+        allEncStr: row.allEncStr,
+        passengerIdNo: row.passengerIdNo,
+        passengerIdTypeCode: row.passengerIdTypeCode,
+        passengerName: row.passengerName
+      }
+      let {data,error} = await api.delPassengers(params);
+      if (error) {
+        this.$common.errorMsg(error, this);
+        return false;
+      }else{
+        let result = data.data.split("-");
+        if(result[1]=="0"){
+          this.$common.successMsg(result[0],this);
+          this.getPassengers();// 刷新乘车人信息
+        }else{
+          this.$common.warningMsg(result[0],this);
+        }
+      }
+      },this); 
+    },
+    indexMethod(index){
+      return index+1;
     },
     submitLoginOut() {
       this.$common.confirm("确定要退出吗？", "用户退出", this.loginOut, this);

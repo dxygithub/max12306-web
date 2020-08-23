@@ -30,6 +30,12 @@ const getUserName=params=>api.post('/max/getUserName',params);
 // 用户退出
 const userLoginOut=params=>api.get('/max/userLoginOut',params);
 
+// 获取乘车人信息
+const getPassengers=params=>api.get('/max/getPassengers',params);
+
+// 删除乘车人
+const delPassengers=params=>api.get('/max/delPassenger',params);
+
 export default {
     getStations,
     getTickets,
@@ -40,5 +46,7 @@ export default {
     userLogin,
     userPassPortUamtk,
     getUserName,
-    userLoginOut
+    userLoginOut,
+    getPassengers,
+    delPassengers
 }
