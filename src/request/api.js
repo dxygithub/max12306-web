@@ -34,7 +34,16 @@ const userLoginOut=params=>api.get('/max/userLoginOut',params);
 const getPassengers=params=>api.get('/max/getPassengers',params);
 
 // 删除乘车人
-const delPassengers=params=>api.get('/max/delPassenger',params);
+const delPassengers=params=>api.post('/max/delPassenger',params);
+
+// 新增乘车人
+const addPassengers=params=>api.post('/max/addPassenger',params);
+
+// 获取订单信息
+const getOrderInfo=params=>api.get('/max/getOrderInfo',params);
+
+// 获取未完成订单信息
+const getNoCompleteOrder=params=>api.get('/max/getOrderNoComplete',params);
 
 export default {
     getStations,
@@ -48,5 +57,8 @@ export default {
     getUserName,
     userLoginOut,
     getPassengers,
-    delPassengers
+    delPassengers,
+    getOrderInfo,
+    addPassengers,
+    getNoCompleteOrder
 }

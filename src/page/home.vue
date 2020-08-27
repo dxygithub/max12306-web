@@ -5,7 +5,7 @@
         <el-row :gutter="20" style="margin-top: 6px;">
           <el-col :span="4">
             <div class="top-left">
-              <el-button type="primary">我的订单</el-button>
+              <el-button type="primary" @click="myOrder">我的订单</el-button>
               <el-button type="primary" @click="getPassengers">乘车人</el-button>
             </div>
           </el-col>
@@ -310,10 +310,16 @@
       </span>
     </el-dialog>
 
-
     <!--乘车人-->
     <el-dialog title="乘车人信息" :visible.sync="passengersDiaVis" width="50%" center>
-      <el-table @row-dbclick="delPassenger" stripe border style="width: 100%" :data="passengersData">
+      <el-button type="primary" style="margin-bottom: 5px;" @click="addPassDiaVis=true">新增乘车人</el-button>
+      <el-table
+        @row-dbclick="delPassenger"
+        stripe
+        border
+        style="width: 100%"
+        :data="passengersData"
+      >
         <el-table-column prop="id" label="序号" type="index" :index="indexMethod" align="center"></el-table-column>
         <el-table-column prop="passengerName" label="姓名" align="center"></el-table-column>
         <el-table-column prop="passengeridTypeName" label="证件类型" align="center"></el-table-column>
@@ -321,14 +327,121 @@
         <el-table-column prop="mobileNo" label="手机/电话" align="center"></el-table-column>
         <el-table-column prop="passengerTypeName" label="旅客类型" align="center"></el-table-column>
         <el-table-column label="操作" align="center">
-           <template slot-scope="scope">
-              <el-button round size="mini" @click="delPassenger(scope.row)">删除</el-button>
-            </template>
+          <template slot-scope="scope">
+            <el-button
+              :disabled="passengerDisable(scope.row)"
+              round
+              size="mini"
+              @click="() => {delPassenger(scope.row)}"
+            >删除</el-button>
+          </template>
         </el-table-column>
       </el-table>
-      <el-pagination style="text-align: right;padding: 20px 0px;" background layout="total, prev, pager, next" :total="passengersTotal"></el-pagination>
+      <el-pagination
+        style="text-align: right;padding: 20px 0px;"
+        background
+        layout="total, prev, pager, next"
+        :total="passengersTotal"
+      ></el-pagination>
       <span slot="footer" class="dialog-footer">
         <el-button type="primary" @click="passengersDiaVis = false">确 定</el-button>
+      </span>
+    </el-dialog>
+
+    <!--新增乘车人表单-->
+    <el-dialog title="新增乘车人" :visible.sync="addPassDiaVis" width="25%" center>
+      <el-form ref="addPassengerForm" :model="addPassengerForm" :rules="passengerRules">
+        <el-form-item label="姓名：" prop="passengerName">
+          <el-input v-model="addPassengerForm.passengerName" placeholder="请输入姓名" />
+        </el-form-item>
+        <el-form-item label="身份证号码：" prop="passengerIdNo">
+          <el-input v-model="addPassengerForm.passengerIdNo" placeholder="请输入身份证号码" />
+        </el-form-item>
+        <el-form-item label="性别：" prop>
+          <el-radio-group v-model="addPassengerForm.sexCode">
+            <el-radio label="M">男</el-radio>
+            <el-radio label="F">女</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="手机号码：" prop="mobileNo">
+          <el-input v-model="addPassengerForm.mobileNo" placeholder="请输入手机号码" />
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submitAddPassenger('addPassengerForm')">确 定</el-button>
+        <el-button type="primary" @click="clearForm('addPassengerForm')">取 消</el-button>
+      </span>
+    </el-dialog>
+
+    <!--订单-->
+    <el-dialog title="我的订单" :visible.sync="orderDiaVis" width="90%" center>
+      <el-tabs v-model="activeName" @tab-click="orderTabClick">
+        <el-tab-pane label="未完成订单" name="first">
+          <el-table
+            v-loading="noCompleteOrderLoad"
+            stripe
+            border
+            style="width: 100%"
+            :data="noCompleteOrder"
+          >
+            <el-table-column prop="id" label="序号" type="index" :index="indexMethod" align="center"></el-table-column>
+            <el-table-column prop="sequenceNo" label="订单号" align="center"></el-table-column>
+            <el-table-column prop="orderDate" label="订单生成日期" align="center"></el-table-column>
+            <el-table-column prop="fromToStation" label="出发站 - 到达站" align="center"></el-table-column>
+            <el-table-column prop="trainCodePage" label="车次" align="center"></el-table-column>
+            <el-table-column prop="startTrainDatePage" label="发车日期" align="center"></el-table-column>
+            <el-table-column prop="arrayPassserNamePage" label="乘车人" align="center"></el-table-column>
+            <el-table-column prop="seat" label="席位" align="center"></el-table-column>
+            <el-table-column prop="strTicketPricePage" label="票价" align="center"></el-table-column>
+            <el-table-column prop="ticketTypeName" label="车票类型" align="center"></el-table-column>
+            <el-table-column prop="ticketStatusName" label="车票状态" align="center"></el-table-column>
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane label="未出行订单" name="second">
+          <el-table
+            v-loading="orderHistoryLoad"
+            stripe
+            border
+            style="width: 100%"
+            :data="orderHistory"
+          >
+            <el-table-column prop="id" label="序号" type="index" :index="indexMethod" align="center"></el-table-column>
+            <el-table-column prop="sequenceNo" label="订单号" align="center"></el-table-column>
+            <el-table-column prop="orderDate" label="订单生成日期" align="center"></el-table-column>
+            <el-table-column prop="fromToStation" label="出发站 - 到达站" align="center"></el-table-column>
+            <el-table-column prop="trainCodePage" label="车次" align="center"></el-table-column>
+            <el-table-column prop="startTrainDatePage" label="发车日期" align="center"></el-table-column>
+            <el-table-column prop="arrayPassserNamePage" label="乘车人" align="center"></el-table-column>
+            <el-table-column prop="seat" label="席位" align="center"></el-table-column>
+            <el-table-column prop="strTicketPricePage" label="票价" align="center"></el-table-column>
+            <el-table-column prop="ticketTypeName" label="车票类型" align="center"></el-table-column>
+            <el-table-column prop="ticketStatusName" label="车票状态" align="center"></el-table-column>
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane label="历史订单" name="third">
+          <el-table
+            v-loading="orderHistoryLoad"
+            stripe
+            border
+            style="width: 100%"
+            :data="orderHistory"
+          >
+            <el-table-column prop="id" label="序号" type="index" :index="indexMethod" align="center"></el-table-column>
+            <el-table-column prop="sequenceNo" label="订单号" align="center"></el-table-column>
+            <el-table-column prop="orderDate" label="订单生成日期" align="center"></el-table-column>
+            <el-table-column prop="fromToStation" label="出发站 - 到达站" align="center"></el-table-column>
+            <el-table-column prop="trainCodePage" label="车次" align="center"></el-table-column>
+            <el-table-column prop="startTrainDatePage" label="发车日期" align="center"></el-table-column>
+            <el-table-column prop="arrayPassserNamePage" label="乘车人" align="center"></el-table-column>
+            <el-table-column prop="seat" label="席位" align="center"></el-table-column>
+            <el-table-column prop="strTicketPricePage" label="票价" align="center"></el-table-column>
+            <el-table-column prop="ticketTypeName" label="车票类型" align="center"></el-table-column>
+            <el-table-column prop="ticketStatusName" label="车票状态" align="center"></el-table-column>
+          </el-table>
+        </el-tab-pane>
+      </el-tabs>
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="orderDiaVis = false">确 定</el-button>
       </span>
     </el-dialog>
   </div>
@@ -372,6 +485,12 @@ export default {
         fromDate: "", // 出发日期
         ticketType: "TICKETS", // 车票类型
       },
+      addPassengerForm: {
+        passengerName: "", // 姓名
+        sexCode: "M", // 性别
+        passengerIdNo: "", // 身份证号码
+        mobileNo: "", // 手机号码
+      },
       rules: {
         fromStationCode: {
           required: true,
@@ -389,6 +508,23 @@ export default {
           trigger: "blur",
         },
       },
+      passengerRules: {
+        passengerName: {
+          required: true,
+          message: "请输入姓名",
+          trigger: "blur",
+        },
+        passengerIdNo: {
+          required: true,
+          message: "请输入身份证号码",
+          trigger: "blur",
+        },
+        mobileNo: {
+          required: true,
+          message: "请输入手机号码",
+          trigger: "blur",
+        },
+      },
       sendTrainTimeValue: "", // 发车时间段
       trainCodeType: [], // 车次类型
       fromStation: [], // 出发车站
@@ -400,6 +536,8 @@ export default {
       tableData: [], // table数据
       ticketArray: [], // 元数据
       tabLoading: false,
+      orderHistoryLoad: false,
+      noCompleteOrderLoad: false,
       tabTotal: 0,
       percentageVal: 0, // 进度
       percentageStartTimeId: "",
@@ -407,6 +545,8 @@ export default {
       timeId: "",
       centerDialogVisible: false,
       passengersDiaVis: false,
+      addPassDiaVis: false,
+      orderDiaVis: false,
       ticketPrice: {
         trainCode: "",
         businessSeatPrice: "",
@@ -426,19 +566,22 @@ export default {
         },
       },
       userName: "", // 用户名
-      passengersData:[], // 乘车人信息
-      passengersTotal:0
+      passengersData: [], // 乘车人信息
+      passengersTotal: 0,
+      activeName: "first",
+      orderHistory: [], // 历史订单
+      noCompleteOrder: [], // 未完成订单
     };
   },
   mounted() {
     let apptk = localStorage.getItem(
       localStorage.getItem("username") + "apptk"
     );
-    if(!apptk){
+    if (!apptk) {
       this.$router.push({ name: "/" });
       return false;
     }
-    this.getUserName();// 获取用户名
+    this.getUserName(); // 获取用户名
     this.getStations();
     this.percentageStartTimeId = setInterval(() => {
       this.percentageValTimer(5);
@@ -859,45 +1002,80 @@ export default {
       }
     },
     // 获取乘车人信息
-    async getPassengers(){
+    async getPassengers() {
       let params = {};
-      let {data,error} = await api.getPassengers(params);
-      if(error){
+      let { data, error } = await api.getPassengers(params);
+      if (error) {
         this.$common.errorMsg(error, this);
         return false;
-      }else{
-        this.passengersData=data.data;
-        this.passengersTotal=this.passengersData.length;
-        this.passengersDiaVis=true;
+      } else {
+        this.passengersDiaVis = true;
+        this.passengersData = data.data;
+        this.passengersTotal = this.passengersData.length;
       }
     },
     // 删除乘车人
-    delPassenger(row){
-      this.$common.confirm("确定删除当前乘车人吗？","删除乘车人",async (row)=>{
-        let params={
+    delPassenger(row) {
+      let params = {
         isUserSelf: row.isUserSelf,
         allEncStr: row.allEncStr,
         passengerIdNo: row.passengerIdNo,
         passengerIdTypeCode: row.passengerIdTypeCode,
-        passengerName: row.passengerName
-      }
-      let {data,error} = await api.delPassengers(params);
+        passengerName: row.passengerName,
+      };
+      this.$common.confirm(
+        "确定删除当前乘车人吗？",
+        "删除乘车人",
+        async () => {
+          let { data, error } = await api.delPassengers(params);
+          if (error) {
+            this.$common.errorMsg(error, this);
+            return false;
+          } else {
+            let result = data.data.split("-");
+            if (result[1] == "0") {
+              this.$common.successMsg(result[0], this);
+              this.passengersDiaVis = false;
+            } else {
+              this.$common.warningMsg(result[0], this);
+            }
+          }
+        },
+        this
+      );
+    },
+    submitAddPassenger(formName) {
+      this.$refs[formName].validate((flag) => {
+        if (flag) {
+          this.addPassengers(formName);
+        } else {
+          // this.$common.errorMsg("请完善乘车人信息", this);
+          console.log("请完善乘车人信息");
+        }
+      });
+    },
+    // 新增乘车人
+    async addPassengers(formName) {
+      let params = this.addPassengerForm;
+      let { data, error } = await api.addPassengers(params);
       if (error) {
         this.$common.errorMsg(error, this);
         return false;
-      }else{
+      } else {
         let result = data.data.split("-");
-        if(result[1]=="0"){
-          this.$common.successMsg(result[0],this);
-          this.getPassengers();// 刷新乘车人信息
-        }else{
-          this.$common.warningMsg(result[0],this);
+        if (result[1] == "0") {
+          this.$common.successMsg(result[0], this);
+          // 清空表单
+          this.$refs[formName].resetFields();
+          this.addPassDiaVis = false;
+          this.passengersDiaVis = false;
+        } else {
+          this.$common.warningMsg(result[0], this);
         }
       }
-      },this); 
     },
-    indexMethod(index){
-      return index+1;
+    indexMethod(index) {
+      return index + 1;
     },
     submitLoginOut() {
       this.$common.confirm("确定要退出吗？", "用户退出", this.loginOut, this);
@@ -913,6 +1091,129 @@ export default {
         this.$common.successMsg(data.message, this);
         this.$router.push({ name: "/" });
       }
+    },
+    orderTabClick(tab, event) {
+      if (tab.index == 0) {
+        // console.log("未完成的订单");
+        this.getNoCompleteOrder();
+      } else if (tab.index == 1) {
+        // console.log("未出行的订单");
+        this.getHistoryOrder("G");
+      } else if (tab.index == 2) {
+        // console.log("历史订单");
+        this.getHistoryOrder("H");
+      }
+    },
+    // 获取未出行或历史订单信息
+    async getHistoryOrder(queryWhereStr) {
+      this.orderHistoryLoad = true;
+      // 清空订单数据
+      this.orderHistory=[];
+      let lastDay = new Date();
+      if(queryWhereStr=="H"){
+        lastDay.setDate(lastDay.getDate() - 1);
+      }
+      let lastDayStr = lastDay.format("yyyy-MM-dd");
+      let firstDay = new Date();
+      firstDay.setDate(firstDay.getDate()-30);
+      let firstDayStr = firstDay.format("yyyy-MM-dd");
+      let params = {
+        queryStartDate: firstDayStr,
+        queryEndDate: lastDayStr,
+        queryWhere: queryWhereStr
+      };
+      let { data, error } = await api.getOrderInfo(params);
+      if (error) {
+        this.$common.errorMsg(error, this);
+        return false;
+      } else {
+        let orderData = data.data;
+        let historyOrderArr = [];
+        if (orderData.length > 0) {
+          for (let item of orderData) {
+            let order = {
+              sequenceNo: item.sequenceNo,
+              orderDate: item.orderDate,
+              fromToStation:
+                item.fromStationNamePage + " - " + item.toStationNamePage,
+              trainCodePage: item.trainCodePage,
+              startTrainDatePage: item.startTrainDatePage,
+              arrayPassserNamePage: item.arrayPassserNamePage,
+              seat:
+                item.coachNo + "车" + item.seatName + " - " + item.seatTypeName,
+              strTicketPricePage: item.strTicketPricePage,
+              ticketTypeName: item.ticketTypeName,
+              ticketStatusName: item.ticketStatusName,
+            };
+            historyOrderArr.push(order);
+          }
+          this.orderHistory = historyOrderArr;
+        }
+        this.orderHistoryLoad = false;
+      }
+    },
+    // 获取未完成订单
+    async getNoCompleteOrder() {
+      this.noCompleteOrderLoad = true;
+      let params = {};
+      let { data, error } = await api.getNoCompleteOrder(params);
+      if (error) {
+        this.$common.errorMsg(error, this);
+        return false;
+      } else {
+        let orderData = data.data;
+        let noCompleteOrderArr = [];
+        if (orderData.sequenceNo != null) {
+          let order = {
+            sequenceNo: orderData.sequenceNo,
+            orderDate: orderData.orderDate,
+            fromToStation:
+              orderData.fromStationNamePage +
+              " - " +
+              orderData.toStationNamePage,
+            trainCodePage: orderData.trainCodePage,
+            startTrainDatePage: orderData.startTrainDatePage,
+            arrayPassserNamePage: orderData.arrayPassserNamePage,
+            seat:
+              orderData.coachNo +
+              "车" +
+              orderData.seatName +
+              " - " +
+              orderData.seatTypeName,
+            strTicketPricePage: orderData.strTicketPricePage,
+            ticketTypeName: orderData.ticketTypeName,
+            ticketStatusName: orderData.ticketStatusName,
+          };
+          noCompleteOrderArr.push(order);
+          this.noCompleteOrder = noCompleteOrderArr;
+        }
+        this.noCompleteOrderLoad = false;
+      }
+    },
+    myOrder() {
+      this.orderDiaVis = true;
+      // 默认查询未完成的订单
+      this.getNoCompleteOrder();
+    },
+    passengerDisable(row) {
+      if (row.passengerName == this.userName) {
+        return true;
+      }
+      return false;
+    },
+    // 获取当前月最后一天
+    getLastDayByMonth() {
+      var date = new Date();
+      var currentMonth = date.getMonth();
+      var nextMonth = ++currentMonth;
+      var nextMonthFirstDay = new Date(date.getFullYear(), nextMonth, 1);
+      var oneDay = 1000 * 60 * 60 * 24;
+      return new Date(nextMonthFirstDay - oneDay);
+    },
+    clearForm(formName) {
+      // 清空新增乘车人表单
+      this.$refs[formName].resetFields();
+      this.addPassDiaVis = false;
     },
   },
 };

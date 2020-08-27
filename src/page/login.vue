@@ -96,7 +96,6 @@ export default {
   mounted () {
     // 提供jquery使用:_this
     const _this = this;
-
     this.getImgCapthcha();
 
     $(".wrap").click(function (e) {
