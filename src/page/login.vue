@@ -8,14 +8,14 @@
              :rules="rules"
              ref="loginForm"
              class="login-form">
-      <el-form-item label="用户名"
+      <el-form-item label="账号"
                     prop="userName"
                     class="item-label">
         <el-input v-model="loginForm.userName"
                   size="small"
                   @keyup.enter.native="loginSubmit('loginForm')"
                   clearable
-                  placeholder="请输入用户名" />
+                  placeholder="请输入用户名 / 邮箱 / 手机号" />
       </el-form-item>
       <el-form-item label="密码"
                     prop="password">
@@ -74,7 +74,7 @@ export default {
       rules: {
         userName: {
           required: true,
-          message: "请输入用户名称",
+          message: "请输入用户名/邮箱/手机号",
           trigger: "blur",
         },
         password: { required: true, message: "请输入密码", trigger: "blur" },

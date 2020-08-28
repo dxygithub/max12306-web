@@ -562,7 +562,18 @@ export default {
       },
       pickerOptions: {
         disabledDate(time) {
-          return time.getTime() < Date.now() - 8.64e7;
+          let curDate = (new Date()).getTime();
+          let lastDate = 29 * 24 * 60 * 60 * 1000;
+          let maxTime = curDate + lastDate;
+          if (time.getTime() < (Date.now() - 8.64e7)) {
+            return true;
+          } else {
+            if(time.getTime()<maxTime){
+              return false;
+            }else{
+              return true;
+            }
+          }
         },
       },
       userName: "", // 用户名
@@ -1108,19 +1119,19 @@ export default {
     async getHistoryOrder(queryWhereStr) {
       this.orderHistoryLoad = true;
       // 清空订单数据
-      this.orderHistory=[];
+      this.orderHistory = [];
       let lastDay = new Date();
-      if(queryWhereStr=="H"){
+      if (queryWhereStr == "H") {
         lastDay.setDate(lastDay.getDate() - 1);
       }
       let lastDayStr = lastDay.format("yyyy-MM-dd");
       let firstDay = new Date();
-      firstDay.setDate(firstDay.getDate()-30);
+      firstDay.setDate(firstDay.getDate() - 30);
       let firstDayStr = firstDay.format("yyyy-MM-dd");
       let params = {
         queryStartDate: firstDayStr,
         queryEndDate: lastDayStr,
-        queryWhere: queryWhereStr
+        queryWhere: queryWhereStr,
       };
       let { data, error } = await api.getOrderInfo(params);
       if (error) {
