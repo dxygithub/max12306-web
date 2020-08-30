@@ -3,7 +3,7 @@ import QS from 'qs';
 import Msg from "../assets/js/common";
 
 // 请求超时时间
-axios.defaults.timeout = 10000;
+axios.defaults.timeout = 100000;
 
 // 默认请求地址
 axios.defaults.baseURL = '/api';
@@ -12,8 +12,8 @@ axios.defaults.baseURL = '/api';
 axios.defaults.withCredentials = true;
 
 // 默认请求头设置
-axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
-
+// axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
+axios.defaults.headers.post['Content-Type'] = 'application/json;charset=UTF-8';
 // 请求拦截器
 // axios.interceptors.request.use(
 //     config => {
@@ -55,7 +55,7 @@ function get(url, params) {
 // post
 function post(url, params) {
     return new Promise((resolve, reject) => {
-        axios.post(url, QS.stringify(params))
+        axios.post(url, JSON.stringify(params))
             .then(res => {
                 resolve(res);
                 return res;

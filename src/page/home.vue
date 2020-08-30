@@ -209,7 +209,7 @@
                 &nbsp;
                 <el-row>
                   <el-col class="start">
-                    <el-button class="start-btn" type="primary" plain>开始刷票</el-button>
+                    <el-button class="start-btn" type="primary" @click="submitOrderDiaVis=true" plain>开始刷票</el-button>
                   </el-col>
                 </el-row>
               </el-col>
@@ -226,6 +226,7 @@
           border
           style="width: 100%"
           v-loading="tabLoading"
+          @select="selectTicket"
           @row-dbclick="queryTicketPrice"
         >
           <el-table-column type="selection" width="55" align="center"></el-table-column>
@@ -444,6 +445,50 @@
         <el-button type="primary" @click="orderDiaVis = false">确 定</el-button>
       </span>
     </el-dialog>
+
+    <!--提交订单表单-->
+    <el-dialog title="提交订单" :visible.sync="submitOrderDiaVis" width="58%" center>
+      <el-form :label-position="labelPosition" ref="submitOrderForm" :model="submitOrderForm">
+        <el-form-item label="选座位：" prop="seatType">
+          <el-checkbox-group v-model="submitOrderForm.seatType">
+                      <el-checkbox label="FIRST_SEAT" key="FIRST_SEAT">一等座</el-checkbox>
+                      <el-checkbox label="SECOND_SEAT" key="SECOND_SEAT">二等座</el-checkbox>
+                      <el-checkbox label="BUSINESS_SEAT" key="BUSINESS_SEAT">商务座</el-checkbox>
+                      <el-checkbox label="HIGH_SOFT_SLEEP" key="HIGH_SOFT_SLEEP">高级软卧</el-checkbox>
+                      <el-checkbox label="SOFT_SLEEP" key="SOFT_SLEEP">软卧</el-checkbox>
+                      <el-checkbox label="HARD_SLEEP" key="HARD_SLEEP">硬卧</el-checkbox>
+                      <el-checkbox label="SOFT_SEAT" key="SOFT_SEAT">软座</el-checkbox>
+                      <el-checkbox label="HARD_SEAT" key="HARD_SEAT">硬座</el-checkbox>
+                      <el-checkbox label="NONE_SEAT" key="NONE_SEAT">无座</el-checkbox>
+                      <el-checkbox label="SPECIAL_SEAT" key="SPECIAL_SEAT">特等座</el-checkbox>            
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item label="乘车人：" prop="passengerInfoList">
+            <el-checkbox-group v-model="submitOrderForm.passengerInfoList">
+                      <el-checkbox
+                        v-for="item in passengersData"
+                        :label="item.passengerName"
+                        :key="item.passengerName"
+                      >{{item.passengerName}}</el-checkbox>
+            </el-checkbox-group>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+          <el-button type="primary" @click="submitOrder">确 定</el-button>
+          <el-button type="primary" @click="submitOrderDiaVis=false">取 消</el-button>
+        </span>
+    </el-dialog>
+    
+    <!--滑块验证内容-->
+    <el-dialog title="订单滑块验证"
+               :close-on-press-escape="false"
+               :close-on-click-modal="false"
+               :show-close="false"
+               :visible.sync="slideDiaVis"
+               width="30%"
+               center>
+      <div id="captcha"></div>
+    </el-dialog>
   </div>
 </template>
 
@@ -490,6 +535,11 @@ export default {
         sexCode: "M", // 性别
         passengerIdNo: "", // 身份证号码
         mobileNo: "", // 手机号码
+      },
+      submitOrderForm: {
+        ticketInfo:{}, // 车票信息
+        passengerInfoList:[], // 乘车人信息
+        seatType: [] // 座位类型
       },
       rules: {
         fromStationCode: {
@@ -547,6 +597,8 @@ export default {
       passengersDiaVis: false,
       addPassDiaVis: false,
       orderDiaVis: false,
+      slideDiaVis: false,
+      submitOrderDiaVis: false,
       ticketPrice: {
         trainCode: "",
         businessSeatPrice: "",
@@ -582,6 +634,9 @@ export default {
       activeName: "first",
       orderHistory: [], // 历史订单
       noCompleteOrder: [], // 未完成订单
+      appKey: "FFFF0N000000000085DE", // appkey后期可能会变
+      scene: "nc_login",
+      labelPosition: "right"
     };
   },
   mounted() {
@@ -1226,6 +1281,142 @@ export default {
       this.$refs[formName].resetFields();
       this.addPassDiaVis = false;
     },
+    // 调用滑块
+    getSlidePasscode (nc_token) {
+      this.slideDiaVis = true;
+      // 等待弹出层渲染完毕再进行调用滑块
+      this.$nextTick(() => {
+        let that = this;
+        let nc = NoCaptcha.init({
+          renderTo: "#captcha",
+          appkey: that.appKey,
+          scene: that.scene,
+          token: nc_token,
+          customWidth: 340,
+          trans: { key1: "code0" },
+          elementID: ["usernameID"],
+          is_Opt: 0,
+          language: "cn",
+          isEnabled: true,
+          timeout: 3000,
+          times: 5,
+          apimap: {},
+          bannerHidden: false,
+          initHidden: false,
+          callback: function (data) {
+            let csessionid = data.csessionid;
+            let sig = data.sig;
+            if (csessionid && sig) {
+              console.log("csessionid:" + csessionid);
+              console.log("sig:" + sig);
+              that.$common.successMsg("滑块验证通过", that);
+              that.slideDiaVis = false;
+            }
+            
+            var formData = {};
+            formData["sessionId"] = csessionid;
+            formData["sig"] = sig;
+            that.checkOrderInfo(formData);
+          },
+          error: function (s) {
+            console.log(s);
+          },
+        });
+        NoCaptcha.setEnabled(true);
+        nc.reset(); //请务必确保这里调用一次reset()方法
+        NoCaptcha.upLang("zh", {
+          LOADING: "加载中...", //加载
+          SLIDER_LABEL: "请按住滑块，拖动到最右边，提交订单", //等待滑动
+          CHECK_Y: "验证通过", //通过
+          ERROR_TITLE: "非常抱歉，这出错了...", //拦截
+          CHECK_N: "验证未通过", //准备唤醒二次验证
+          OVERLAY_INFORM: "经检测你当前操作环境存在风险，请输入验证码", //二次验证
+          TIPS_TITLE: "验证码错误，请重新输入", //验证码输错时的提示
+        });
+      });
+    },
+    // 检查订单并校验滑块验证
+    async checkOrderInfo(formData){
+      let params=formData;
+      let loadingid=this.$common.loading("订单正在提交确认中，请稍等...", this);
+      let { data, error } = await api.checkSlidePassCodeForOrder(params);
+      // 关闭遮罩层
+      loadingid.close();
+      if (error) {
+        console.log(error);
+        this.$common.errorMsg("订单提交失败", this);
+      } else {
+        if(data.code===200){
+          // 订单出票成功
+          this.$common.confirm(data.message,"订单提示",()=>{},this);
+        }else{
+          // 订单出票失败
+          this.$common.confirm(data.message,"订单提示",()=>{},this);
+        }
+      }
+    },
+    // 提交预定订单
+    async submitOrder(){
+      let passArr=[];
+      for(let pass of this.submitOrderForm.passengerInfoList){
+         for(let item of this.passengersData){
+           if(pass==item.passengerName){
+             passArr.push(item);
+             break;
+           }
+        }
+      }
+      let params={
+        fromStationCode:this.queryForm.fromStationCode, // 出发地车站编号
+        toStationCode:this.queryForm.toStationCode, // 目的地车站编号
+        fromDate:this.queryForm.fromDate, // 出发日期
+        ticketType:"TICKETS",
+        ticketInfo:this.submitOrderForm.ticketInfo, // 车票信息
+        passengerInfoList: passArr, // 乘车人信息
+        seatType: this.submitOrderForm.seatType[0] // 座位类型
+      }
+      let loadingid=this.$common.loading("订单正在预定中，请稍等...", this);
+      let { data, error } = await api.submitOrderRequest(params);
+      // 关闭遮罩层
+      loadingid.close();
+      if (error) {
+        console.log(error);
+        this.$common.errorMsg("订单预定提交失败", this);
+      } else {
+        if(data.code===200){
+          if(data.data.ifCheckSlidePasscodeToken!=""){
+            // 初始化订单滑块
+            this.getSlidePasscode(data.data.ifCheckSlidePasscodeToken);
+          }else{
+            // 不需要验证
+            let formData={
+              sessionId:"",
+              sig:""
+            }
+            this.checkOrderInfo(formData);
+          }
+        } else {
+          this.$common.confirm(data.message,"订单提示",()=>{},this);
+        }
+      } 
+    },
+    selectTicket(row){
+      console.log(row);
+      let ticket={}
+      for(let tick of row){
+        for(let item of this.ticketArray){
+          if(tick.trainCode==item.trainCode){
+            ticket=item;
+            break;
+          }
+        }
+        if(ticket!=null){
+          break;
+        }
+      }
+      this.submitOrderForm.ticketInfo=ticket;
+      console.log("车票信息:"+QS.stringify(this.submitOrderForm.ticketInfo));
+    }
   },
 };
 </script>

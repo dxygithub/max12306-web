@@ -25,7 +25,7 @@ const userLogin = params => api.post('/max/userLogin', params);
 const userPassPortUamtk = params => api.post('/max/passPortUamtk', params);
 
 // 获取用户名
-const getUserName=params=>api.post('/max/getUserName',params);
+const getUserName=params=>api.get('/max/getUserName',params);
 
 // 用户退出
 const userLoginOut=params=>api.get('/max/userLoginOut',params);
@@ -45,6 +45,12 @@ const getOrderInfo=params=>api.get('/max/getOrderInfo',params);
 // 获取未完成订单信息
 const getNoCompleteOrder=params=>api.get('/max/getOrderNoComplete',params);
 
+// 滑块验证 -> 检查订单 -> 确认订单
+const checkSlidePassCodeForOrder=params=>api.post('/max/checkSlidePassCodeForOrder',params);
+
+// 提交订单
+const submitOrderRequest=params=>api.post('/max/submitOrder',params);
+
 export default {
     getStations,
     getTickets,
@@ -60,5 +66,7 @@ export default {
     delPassengers,
     getOrderInfo,
     addPassengers,
-    getNoCompleteOrder
+    getNoCompleteOrder,
+    checkSlidePassCodeForOrder,
+    submitOrderRequest
 }
