@@ -6,7 +6,7 @@
           <el-col :span="4">
             <div class="top-left">
               <el-button type="primary" @click="myOrder">我的订单</el-button>
-              <el-button type="primary" @click="getPassengers">乘车人</el-button>
+              <el-button type="primary" @click="passengersDiaVis=true">乘车人</el-button>
             </div>
           </el-col>
           <el-col :span="15">
@@ -22,7 +22,7 @@
                 </div>
               </el-col>
               <el-col :span="8">
-                <el-button type="primary" style>同步服务器时间</el-button>
+                <el-button type="primary" @click="getUserName" style="width:100%;">刷新用户</el-button>
               </el-col>
               <el-col :span="3" style="margin-left:40px;">
                 <img
@@ -209,7 +209,12 @@
                 &nbsp;
                 <el-row>
                   <el-col class="start">
-                    <el-button class="start-btn" type="primary" @click="submitOrderDiaVis=true" plain>开始刷票</el-button>
+                    <el-button
+                      class="start-btn"
+                      type="primary"
+                      @click="submitOrderDiaVis=true"
+                      plain
+                    >开始下单</el-button>
                   </el-col>
                 </el-row>
               </el-col>
@@ -245,7 +250,13 @@
           <el-table-column prop="hardSeatCount" label="硬座" align="center"></el-table-column>
           <el-table-column prop="noneSeatCount" label="无座" align="center"></el-table-column>
           <el-table-column prop="other" label="其他" align="center"></el-table-column>
-          <el-table-column prop="remark" label="备注" align="center"></el-table-column>
+          <el-table-column prop="remark" label="备注" width="120" align="center">
+            <template slot-scope="scope">
+              <span v-if="scope.row.canBuy=='Y'" style="color: #37B328">{{ scope.row.remark }}</span>
+              <span v-else-if="scope.row.canBuy=='N'" style="color: #E6A23C">{{ scope.row.remark }}</span>
+              <span v-else style="color: red">{{ scope.row.remark }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" align="center">
             <template slot-scope="scope">
               <el-button round size="mini" @click="queryTicketPrice(scope.row)">查看票价</el-button>
@@ -447,46 +458,70 @@
     </el-dialog>
 
     <!--提交订单表单-->
-    <el-dialog title="提交订单" :visible.sync="submitOrderDiaVis" width="58%" center>
+    <el-dialog
+      title="提交订单"
+      :visible.sync="submitOrderDiaVis"
+      @close="submitOrderDiaVisClose('submitOrderForm')"
+      width="58%"
+      center
+    >
       <el-form :label-position="labelPosition" ref="submitOrderForm" :model="submitOrderForm">
         <el-form-item label="选座位：" prop="seatType">
           <el-checkbox-group v-model="submitOrderForm.seatType">
-                      <el-checkbox label="FIRST_SEAT" key="FIRST_SEAT">一等座</el-checkbox>
-                      <el-checkbox label="SECOND_SEAT" key="SECOND_SEAT">二等座</el-checkbox>
-                      <el-checkbox label="BUSINESS_SEAT" key="BUSINESS_SEAT">商务座</el-checkbox>
-                      <el-checkbox label="HIGH_SOFT_SLEEP" key="HIGH_SOFT_SLEEP">高级软卧</el-checkbox>
-                      <el-checkbox label="SOFT_SLEEP" key="SOFT_SLEEP">软卧</el-checkbox>
-                      <el-checkbox label="HARD_SLEEP" key="HARD_SLEEP">硬卧</el-checkbox>
-                      <el-checkbox label="SOFT_SEAT" key="SOFT_SEAT">软座</el-checkbox>
-                      <el-checkbox label="HARD_SEAT" key="HARD_SEAT">硬座</el-checkbox>
-                      <el-checkbox label="NONE_SEAT" key="NONE_SEAT">无座</el-checkbox>
-                      <el-checkbox label="SPECIAL_SEAT" key="SPECIAL_SEAT">特等座</el-checkbox>            
+            <el-checkbox label="FIRST_SEAT" key="FIRST_SEAT">一等座</el-checkbox>
+            <el-checkbox label="SECOND_SEAT" key="SECOND_SEAT">二等座</el-checkbox>
+            <el-checkbox label="BUSINESS_SEAT" key="BUSINESS_SEAT">商务座</el-checkbox>
+            <el-checkbox label="HIGH_SOFT_SLEEP" key="HIGH_SOFT_SLEEP">高级软卧</el-checkbox>
+            <el-checkbox label="SOFT_SLEEP" key="SOFT_SLEEP">软卧</el-checkbox>
+            <el-checkbox label="HARD_SLEEP" key="HARD_SLEEP">硬卧</el-checkbox>
+            <el-checkbox label="SOFT_SEAT" key="SOFT_SEAT">软座</el-checkbox>
+            <el-checkbox label="HARD_SEAT" key="HARD_SEAT">硬座</el-checkbox>
+            <el-checkbox label="NONE_SEAT" key="NONE_SEAT">无座</el-checkbox>
+            <el-checkbox label="SPECIAL_SEAT" key="SPECIAL_SEAT">特等座</el-checkbox>
           </el-checkbox-group>
         </el-form-item>
         <el-form-item label="乘车人：" prop="passengerInfoList">
-            <el-checkbox-group v-model="submitOrderForm.passengerInfoList">
-                      <el-checkbox
-                        v-for="item in passengersData"
-                        :label="item.passengerName"
-                        :key="item.passengerName"
-                      >{{item.passengerName}}</el-checkbox>
-            </el-checkbox-group>
+          <el-checkbox-group v-model="submitOrderForm.passengerInfoList">
+            <el-checkbox
+              v-for="item in passengersData"
+              :label="item.passengerName"
+              :key="item.passengerName"
+            >{{item.passengerName}}</el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item label="是否预售：" prop="isYS">
+          <el-radio-group v-model="submitOrderForm.isYS">
+            <el-radio class="radio-style" label="N">否</el-radio>
+            <el-radio label="Y">
+              是
+              <el-input
+                style="width:83%;margin-left:10px;"
+                :disabled="submitOrderForm.isYS=='N'"
+                clearable
+                size="medium"
+                v-model="submitOrderForm.ysTime"
+                placeholder="请输入预售时间: 如 -> 13:30"
+              />
+            </el-radio>
+          </el-radio-group>
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
-          <el-button type="primary" @click="submitOrder">确 定</el-button>
-          <el-button type="primary" @click="submitOrderDiaVis=false">取 消</el-button>
-        </span>
+        <el-button type="primary" @click="submitOrder">确 定</el-button>
+        <el-button type="primary" @click="submitOrderDiaVis=false">取 消</el-button>
+      </span>
     </el-dialog>
-    
+
     <!--滑块验证内容-->
-    <el-dialog title="订单滑块验证"
-               :close-on-press-escape="false"
-               :close-on-click-modal="false"
-               :show-close="false"
-               :visible.sync="slideDiaVis"
-               width="30%"
-               center>
+    <el-dialog
+      title="订单滑块验证"
+      :close-on-press-escape="false"
+      :close-on-click-modal="false"
+      :show-close="false"
+      :visible.sync="slideDiaVis"
+      width="30%"
+      center
+    >
       <div id="captcha"></div>
     </el-dialog>
   </div>
@@ -537,9 +572,11 @@ export default {
         mobileNo: "", // 手机号码
       },
       submitOrderForm: {
-        ticketInfo:{}, // 车票信息
-        passengerInfoList:[], // 乘车人信息
-        seatType: [] // 座位类型
+        ticketInfo: {}, // 车票信息
+        passengerInfoList: [], // 乘车人信息
+        seatType: [], // 座位类型
+        isYS: "N", // 是否预售
+        ysTime: "", // 预售时间
       },
       rules: {
         fromStationCode: {
@@ -614,15 +651,15 @@ export default {
       },
       pickerOptions: {
         disabledDate(time) {
-          let curDate = (new Date()).getTime();
+          let curDate = new Date().getTime();
           let lastDate = 29 * 24 * 60 * 60 * 1000;
           let maxTime = curDate + lastDate;
-          if (time.getTime() < (Date.now() - 8.64e7)) {
+          if (time.getTime() < Date.now() - 8.64e7) {
             return true;
           } else {
-            if(time.getTime()<maxTime){
+            if (time.getTime() < maxTime) {
               return false;
-            }else{
+            } else {
               return true;
             }
           }
@@ -636,7 +673,9 @@ export default {
       noCompleteOrder: [], // 未完成订单
       appKey: "FFFF0N000000000085DE", // appkey后期可能会变
       scene: "nc_login",
-      labelPosition: "right"
+      labelPosition: "right",
+      excuteSubmitOrderTimeId: "", // 定时提交订单ID
+      excuteGetUserNameId: "", // 定时获取用户名
     };
   },
   mounted() {
@@ -863,6 +902,7 @@ export default {
             fromStationNo: item.fromStationNo,
             toStationNo: item.toStationNo,
             seatTypes: item.seatType,
+            canBuy: item.canBuy
           };
           ticketArray.push(ticketInfo);
         }
@@ -1053,6 +1093,8 @@ export default {
         if (data.code === 200 && data.data != "5") {
           this.$common.successMsg("获取用户名成功", this);
           this.userName = data.data;
+          // 获取乘车人信息
+          this.getPassengers();
         } else {
           this.$common.errorMsg(data.message, this);
           localStorage.removeItem(localStorage.getItem("username") + "apptk");
@@ -1075,7 +1117,7 @@ export default {
         this.$common.errorMsg(error, this);
         return false;
       } else {
-        this.passengersDiaVis = true;
+        // this.passengersDiaVis = true;
         this.passengersData = data.data;
         this.passengersTotal = this.passengersData.length;
       }
@@ -1133,8 +1175,10 @@ export default {
           this.$common.successMsg(result[0], this);
           // 清空表单
           this.$refs[formName].resetFields();
+          // 刷新乘车人列表
+          this.getPassengers();
           this.addPassDiaVis = false;
-          this.passengersDiaVis = false;
+          // this.passengersDiaVis = false;
         } else {
           this.$common.warningMsg(result[0], this);
         }
@@ -1229,28 +1273,24 @@ export default {
       } else {
         let orderData = data.data;
         let noCompleteOrderArr = [];
-        if (orderData.sequenceNo != null) {
-          let order = {
-            sequenceNo: orderData.sequenceNo,
-            orderDate: orderData.orderDate,
-            fromToStation:
-              orderData.fromStationNamePage +
-              " - " +
-              orderData.toStationNamePage,
-            trainCodePage: orderData.trainCodePage,
-            startTrainDatePage: orderData.startTrainDatePage,
-            arrayPassserNamePage: orderData.arrayPassserNamePage,
-            seat:
-              orderData.coachNo +
-              "车" +
-              orderData.seatName +
-              " - " +
-              orderData.seatTypeName,
-            strTicketPricePage: orderData.strTicketPricePage,
-            ticketTypeName: orderData.ticketTypeName,
-            ticketStatusName: orderData.ticketStatusName,
-          };
-          noCompleteOrderArr.push(order);
+        if (orderData.length > 0) {
+          for (let item of orderData) {
+            let order = {
+              sequenceNo: item.sequenceNo,
+              orderDate: item.orderDate,
+              fromToStation:
+                item.fromStationNamePage + " - " + item.toStationNamePage,
+              trainCodePage: item.trainCodePage,
+              startTrainDatePage: item.startTrainDatePage,
+              arrayPassserNamePage: item.arrayPassserNamePage,
+              seat:
+                item.coachNo + "车" + item.seatName + " - " + item.seatTypeName,
+              strTicketPricePage: item.strTicketPricePage,
+              ticketTypeName: item.ticketTypeName,
+              ticketStatusName: item.ticketStatusName,
+            };
+            noCompleteOrderArr.push(order);
+          }
           this.noCompleteOrder = noCompleteOrderArr;
         }
         this.noCompleteOrderLoad = false;
@@ -1282,7 +1322,7 @@ export default {
       this.addPassDiaVis = false;
     },
     // 调用滑块
-    getSlidePasscode (nc_token) {
+    getSlidePasscode(nc_token) {
       this.slideDiaVis = true;
       // 等待弹出层渲染完毕再进行调用滑块
       this.$nextTick(() => {
@@ -1312,7 +1352,7 @@ export default {
               that.$common.successMsg("滑块验证通过", that);
               that.slideDiaVis = false;
             }
-            
+
             var formData = {};
             formData["sessionId"] = csessionid;
             formData["sig"] = sig;
@@ -1336,9 +1376,12 @@ export default {
       });
     },
     // 检查订单并校验滑块验证
-    async checkOrderInfo(formData){
-      let params=formData;
-      let loadingid=this.$common.loading("订单正在提交确认中，请稍等...", this);
+    async checkOrderInfo(formData) {
+      let params = formData;
+      let loadingid = this.$common.loading(
+        "订单正在提交确认中，请稍等...",
+        this
+      );
       let { data, error } = await api.checkSlidePassCodeForOrder(params);
       // 关闭遮罩层
       loadingid.close();
@@ -1346,36 +1389,99 @@ export default {
         console.log(error);
         this.$common.errorMsg("订单提交失败", this);
       } else {
-        if(data.code===200){
+        if (data.code === 200) {
           // 订单出票成功
-          this.$common.confirm(data.message,"订单提示",()=>{},this);
-        }else{
+          this.$common.confirm(data.message, "订单提示", () => {}, this);
+        } else {
           // 订单出票失败
-          this.$common.confirm(data.message,"订单提示",()=>{},this);
+          this.$common.confirm(data.message, "订单提示", () => {}, this);
         }
       }
     },
     // 提交预定订单
-    async submitOrder(){
-      let passArr=[];
-      for(let pass of this.submitOrderForm.passengerInfoList){
-         for(let item of this.passengersData){
-           if(pass==item.passengerName){
-             passArr.push(item);
-             break;
-           }
+    submitOrder() {
+      let passArr = [];
+      for (let pass of this.submitOrderForm.passengerInfoList) {
+        for (let item of this.passengersData) {
+          if (pass == item.passengerName) {
+            passArr.push(item);
+            break;
+          }
         }
       }
-      let params={
-        fromStationCode:this.queryForm.fromStationCode, // 出发地车站编号
-        toStationCode:this.queryForm.toStationCode, // 目的地车站编号
-        fromDate:this.queryForm.fromDate, // 出发日期
-        ticketType:"TICKETS",
-        ticketInfo:this.submitOrderForm.ticketInfo, // 车票信息
+      let params = {
+        fromStationCode: this.queryForm.fromStationCode, // 出发地车站编号
+        toStationCode: this.queryForm.toStationCode, // 目的地车站编号
+        fromDate: this.queryForm.fromDate, // 出发日期
+        ticketType: "TICKETS",
+        ticketInfo: this.submitOrderForm.ticketInfo, // 车票信息
         passengerInfoList: passArr, // 乘车人信息
-        seatType: this.submitOrderForm.seatType[0] // 座位类型
+        seatType: this.submitOrderForm.seatType[0], // 座位类型
+      };
+
+      if (params.fromStationCode == "") {
+        this.$common.errorMsg("出发地车站为空", this);
+        return false;
+      } else if (params.toStationCode == "") {
+        this.$common.errorMsg("目的地车站为空", this);
+        return false;
+      } else if (params.fromDate == "") {
+        this.$common.errorMsg("出发日期为空", this);
+        return false;
+      } else if (Object.keys(params.ticketInfo).length == 0) {
+        this.$common.errorMsg("请选择出发车次", this);
+        return false;
+      } else if (params.seatType == null) {
+        this.$common.errorMsg("请选择座位", this);
+        return false;
+      } else if (params.passengerInfoList.length <= 0) {
+        this.$common.errorMsg("请选择乘车人", this);
+        return false;
       }
-      let loadingid=this.$common.loading("订单正在预定中，请稍等...", this);
+
+      // 准点预售
+      if (this.submitOrderForm.isYS == "Y") {
+        if (this.submitOrderForm.ysTime == "") {
+          this.$common.errorMsg("请设置预售时间", this);
+          return false;
+        }
+        let todayDate = new Date();
+        let ysDate = new Date(
+          todayDate.format("yyyy-MM-dd") +
+            " " +
+            this.submitOrderForm.ysTime +
+            ":00"
+        );
+        let residueTime = ysDate.getTime() - todayDate.getTime();
+        console.log(
+          "距离预售时间预计还剩: " + parseInt(residueTime / 1000 / 60) + "/min"
+        );
+        // 提交订单前10秒重新获取用户名，防止提交订单失效
+        this.excuteGetUserNameId = setTimeout(() => {
+          this.getUserName();
+        }, residueTime - 10000);
+
+        // 保存订单数据
+        localStorage.setItem("order_data", JSON.stringify(params));
+        // 设置订单定时任务
+        this.excuteSubmitOrderTimeId = setTimeout(() => {
+          let orderData = JSON.parse(localStorage.getItem("order_data"));
+          this.executeSubmitOrder(orderData);
+        }, residueTime);
+        this.$common.successMsg(
+          "本次订单为准点预售，预计将在" +
+            parseInt(residueTime / 1000 / 60) +
+            "分钟后自动提交订单",
+          this
+        );
+      } else {
+        // 非准点预售
+        this.executeSubmitOrder(params);
+      }
+    },
+    // 执行提交订单
+    async executeSubmitOrder(params) {
+      let loadingid = this.$common.loading("订单正在预定中，请稍等...", this);
       let { data, error } = await api.submitOrderRequest(params);
       // 关闭遮罩层
       loadingid.close();
@@ -1383,40 +1489,40 @@ export default {
         console.log(error);
         this.$common.errorMsg("订单预定提交失败", this);
       } else {
-        if(data.code===200){
-          if(data.data.ifCheckSlidePasscodeToken!=""){
-            // 初始化订单滑块
+        console.log("本次订单提交结果: " + JSON.stringify(data));
+        if (data.code == 200) {
+          if (data.isSlidePassCode == 1) {
+            // 本次订单，需要滑块验证，准备初始化滑块验证
             this.getSlidePasscode(data.data.ifCheckSlidePasscodeToken);
-          }else{
-            // 不需要验证
-            let formData={
-              sessionId:"",
-              sig:""
-            }
-            this.checkOrderInfo(formData);
+          } else if (data.isSlidePassCode == 0) {
+            // 本次订单，不需要滑块验证，并出票成功
+            this.$common.confirm(data.message, "订单提示", () => {}, this);
           }
         } else {
-          this.$common.confirm(data.message,"订单提示",()=>{},this);
+          this.$common.confirm(data.message, "订单提示", () => {}, this);
         }
-      } 
+      }
     },
-    selectTicket(row){
+    selectTicket(row) {
       console.log(row);
-      let ticket={}
-      for(let tick of row){
-        for(let item of this.ticketArray){
-          if(tick.trainCode==item.trainCode){
-            ticket=item;
+      let ticket = {};
+      for (let tick of row) {
+        for (let item of this.ticketArray) {
+          if (tick.trainCode == item.trainCode) {
+            ticket = item;
             break;
           }
         }
-        if(ticket!=null){
+        if (ticket != null) {
           break;
         }
       }
-      this.submitOrderForm.ticketInfo=ticket;
-      console.log("车票信息:"+QS.stringify(this.submitOrderForm.ticketInfo));
-    }
+      this.submitOrderForm.ticketInfo = ticket;
+      console.log("车票信息:" + QS.stringify(this.submitOrderForm.ticketInfo));
+    },
+    submitOrderDiaVisClose(formName) {
+      this.$refs[formName].resetFields();
+    },
   },
 };
 </script>
