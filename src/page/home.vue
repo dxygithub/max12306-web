@@ -745,6 +745,7 @@ export default {
           this.tabLoading = false;
         }
       }
+      return this.ticketArray;
     },
     filterTrainInfo(type) {
       if (type == 1) {
@@ -902,7 +903,7 @@ export default {
             fromStationNo: item.fromStationNo,
             toStationNo: item.toStationNo,
             seatTypes: item.seatType,
-            canBuy: item.canBuy
+            canBuy: item.canBuy,
           };
           ticketArray.push(ticketInfo);
         }
@@ -1456,16 +1457,31 @@ export default {
         console.log(
           "距离预售时间预计还剩: " + parseInt(residueTime / 1000 / 60) + "/min"
         );
-        // 提交订单前10秒重新获取用户名，防止提交订单失效
-        this.excuteGetUserNameId = setTimeout(() => {
-          this.getUserName();
-        }, residueTime - 10000);
 
         // 保存订单数据
         localStorage.setItem("order_data", JSON.stringify(params));
+
+        // 提交订单前10秒重新获取用户名，防止提交订单失效
+        this.excuteGetUserNameId = setTimeout(() => {
+          // 重新获取车票信息
+          // let tickets = this.queryTickets(this.queryForm);
+          // let orderData = JSON.parse(localStorage.getItem("order_data"));
+          // console.log("befor-ticket:"+JSON.stringify(orderData));
+          // for (let item of tickets) {
+          //   if (orderData.ticketInfo.trainCode == item.trainCode) {
+          //       orderData.ticketInfo = item;
+          //       break;
+          //   }
+          // }
+          // localStorage.setItem("order_data", JSON.stringify(orderData));
+          // console.log("after-ticket:"+JSON.stringify(orderData));
+           this.getUserName();
+        }, residueTime - 5000);
+
         // 设置订单定时任务
         this.excuteSubmitOrderTimeId = setTimeout(() => {
           let orderData = JSON.parse(localStorage.getItem("order_data"));
+          // this.$common.successMsg("测试完成",this);
           this.executeSubmitOrder(orderData);
         }, residueTime);
         this.$common.successMsg(
