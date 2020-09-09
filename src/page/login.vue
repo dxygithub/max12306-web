@@ -4,27 +4,25 @@
       <img src="../assets/image/080538219e14a50979b3fadafce70d22.jpg" />
     </div>
     <h1 class="head-title">12306 - Max</h1>
-    <el-form :model="loginForm"
-             :rules="rules"
-             ref="loginForm"
-             class="login-form">
-      <el-form-item label="账号"
-                    prop="userName"
-                    class="item-label">
-        <el-input v-model="loginForm.userName"
-                  size="small"
-                  @keyup.enter.native="loginSubmit('loginForm')"
-                  clearable
-                  placeholder="请输入用户名 / 邮箱 / 手机号" />
+    <el-form :model="loginForm" :rules="rules" ref="loginForm" class="login-form">
+      <el-form-item label="账号" prop="userName" class="item-label">
+        <el-input
+          v-model="loginForm.userName"
+          size="small"
+          @keyup.enter.native="loginSubmit('loginForm')"
+          clearable
+          placeholder="请输入用户名 / 邮箱 / 手机号"
+        />
       </el-form-item>
-      <el-form-item label="密码"
-                    prop="password">
-        <el-input v-model="loginForm.password"
-                  size="small"
-                  @keyup.enter.native="loginSubmit('loginForm')"
-                  clearable
-                  show-password
-                  placeholder="请输入密码" />
+      <el-form-item label="密码" prop="password">
+        <el-input
+          v-model="loginForm.password"
+          size="small"
+          @keyup.enter.native="loginSubmit('loginForm')"
+          clearable
+          show-password
+          placeholder="请输入密码"
+        />
       </el-form-item>
       <el-form-item>
         <!--图片验证码-->
@@ -33,21 +31,21 @@
         </div>
       </el-form-item>
       <el-form-item>
-        <el-button type="primary"
-                   class="submit-btn"
-                   @click="loginSubmit('loginForm')">登录</el-button>
+        <el-button type="primary" class="submit-btn" @click="loginSubmit('loginForm')">登录</el-button>
         <!-- <el-button type="primary"  @click="checkImgCapthcha">校验验证码</el-button> -->
       </el-form-item>
     </el-form>
 
     <!--滑块验证内容-->
-    <el-dialog title="滑块验证"
-               :close-on-press-escape="false"
-               :close-on-click-modal="false"
-               :show-close="false"
-               :visible.sync="centerDialogVisible"
-               width="30%"
-               center>
+    <el-dialog
+      title="滑块验证"
+      :close-on-press-escape="false"
+      :close-on-click-modal="false"
+      :show-close="false"
+      :visible.sync="centerDialogVisible"
+      width="30%"
+      center
+    >
       <div id="captcha"></div>
       <!-- <span slot="footer" class="dialog-footer">
         <el-button @click="centerDialogVisible = false">取 消</el-button>
@@ -65,7 +63,7 @@ import SM4 from "../assets/js/SM4";
 
 export default {
   name: "login",
-  data () {
+  data() {
     return {
       loginForm: {
         userName: "",
@@ -92,8 +90,8 @@ export default {
       autoCheck: true, // 图片验证码是否自动识别
     };
   },
-  created () { },
-  mounted () {
+  created() {},
+  mounted() {
     // 提供jquery使用:_this
     const _this = this;
     this.getImgCapthcha();
@@ -105,10 +103,10 @@ export default {
       var left = parseInt(e.pageX - offset.left - radius);
       $(".wrap").append(
         '<div class="ball" style="top:' +
-        top +
-        "px;left:" +
-        left +
-        'px;"></div>'
+          top +
+          "px;left:" +
+          left +
+          'px;"></div>'
       );
       //$('.container').html('<div class="ball" style="top:'+top+';left:'+left+'"></div>');
       _this.capthChaPos.push(left + "," + top);
@@ -116,7 +114,7 @@ export default {
     });
   },
   methods: {
-    loginSubmit (formName) {
+    loginSubmit(formName) {
       this.$refs[formName].validate((flag) => {
         if (flag) {
           let param = this.loginForm;
@@ -129,7 +127,7 @@ export default {
       });
     },
     // 校验图片验证码
-    async checkImgCapthcha () {
+    async checkImgCapthcha() {
       let tempArr = this.jqueryCallBack.split("_");
       let captchaPos = this.capthChaPos;
       if (!this.autoCheck) {
@@ -148,14 +146,24 @@ export default {
         console.log(error);
         this.$common.errorMsg("验证码校验失败", this);
       } else {
-        if (data.code === 200 && data.data == "4") {
+        var resArr = data.data.split("-");
+        if (data.code === 200 && resArr[0] == "4") {
           this.$common.successMsg("验证码校验通过", this);
           // 清空点击标记
           $(".ball").remove();
           // 清空坐标数组
           this.capthChaPos = [];
-          // 初始化滑块验证
-          this.initSalisPassPort();
+
+          // 初始化滑块验证 -- 2020-09-09 登录取消滑块验证
+          // this.initSalisPassPort();
+
+          // 开始登录
+          var formData = {};
+          formData["username"] = this.loginForm.userName;
+          formData["password"] = "@" + SM4.encrypt_ecb(this.loginForm.password, this.SM4_key);
+          formData["appid"] = "otn"; // popup_passport_appId
+          formData["answer"] = resArr[1];
+          this.userLogin(formData);
         } else {
           this.$common.errorMsg(data.message, this);
           // 清空点击标记
@@ -168,7 +176,7 @@ export default {
       }
     },
     // 获取图片验证码
-    async getImgCapthcha () {
+    async getImgCapthcha() {
       let params = {};
       let { data, error } = await api.getImgCapthcha(params);
       if (error) {
@@ -181,7 +189,7 @@ export default {
       }
     },
     // 初始化滑块验证
-    async initSalisPassPort () {
+    async initSalisPassPort() {
       let params = {
         appid: "otn",
         username: this.loginForm.userName,
@@ -201,7 +209,7 @@ export default {
       }
     },
     // 调用滑块
-    getSlidePasscode (nc_token) {
+    getSlidePasscode(nc_token) {
       this.centerDialogVisible = true;
       // 等待弹出层渲染完毕再进行调用滑块
       this.$nextTick(() => {
@@ -263,7 +271,7 @@ export default {
       });
     },
     // 用户登录
-    async userLogin (formData) {
+    async userLogin(formData) {
       this.loadingId = this.$common.loading("登录中...", this);
       let params = formData;
       let { data, error } = await api.userLogin(params);
@@ -290,7 +298,7 @@ export default {
       }
     },
     // 用户认证
-    async userPassPortUamtk () {
+    async userPassPortUamtk() {
       let local_uamtk = localStorage.getItem(
         localStorage.getItem("username") + "uamtk"
       );

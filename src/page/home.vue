@@ -466,16 +466,30 @@
       center
     >
       <el-form :label-position="labelPosition" ref="submitOrderForm" :model="submitOrderForm">
+        <el-form-item label="出发车次：">
+          <label>
+            {{submitOrderForm.ticketInfo.trainCode}}&nbsp;&nbsp;/&nbsp;&nbsp;
+            {{submitOrderForm.ticketInfo.fromStationName}}&nbsp;&nbsp;- >&nbsp;&nbsp;
+            {{submitOrderForm.ticketInfo.toStationName}}&nbsp;&nbsp;/&nbsp;&nbsp;
+            {{queryForm.fromDate}}&nbsp;&nbsp;{{submitOrderForm.ticketInfo.fromTime}}
+          </label>
+          <el-button
+            type="primary"
+            @click="refushTickets"
+            style="margin-left: 20px;"
+            :disabled="Object.keys(submitOrderForm.ticketInfo).length == 0"
+          >刷新已选车次</el-button>
+        </el-form-item>
         <el-form-item label="选座位：" prop="seatType">
           <el-checkbox-group v-model="submitOrderForm.seatType">
             <el-checkbox label="FIRST_SEAT" key="FIRST_SEAT">一等座</el-checkbox>
             <el-checkbox label="SECOND_SEAT" key="SECOND_SEAT">二等座</el-checkbox>
+            <el-checkbox label="HARD_SLEEP" key="HARD_SLEEP">硬卧</el-checkbox>
+            <el-checkbox label="SOFT_SLEEP" key="SOFT_SLEEP">软卧</el-checkbox>
+            <el-checkbox label="HARD_SEAT" key="HARD_SEAT">硬座</el-checkbox>
             <el-checkbox label="BUSINESS_SEAT" key="BUSINESS_SEAT">商务座</el-checkbox>
             <el-checkbox label="HIGH_SOFT_SLEEP" key="HIGH_SOFT_SLEEP">高级软卧</el-checkbox>
-            <el-checkbox label="SOFT_SLEEP" key="SOFT_SLEEP">软卧</el-checkbox>
-            <el-checkbox label="HARD_SLEEP" key="HARD_SLEEP">硬卧</el-checkbox>
             <el-checkbox label="SOFT_SEAT" key="SOFT_SEAT">软座</el-checkbox>
-            <el-checkbox label="HARD_SEAT" key="HARD_SEAT">硬座</el-checkbox>
             <el-checkbox label="NONE_SEAT" key="NONE_SEAT">无座</el-checkbox>
             <el-checkbox label="SPECIAL_SEAT" key="SPECIAL_SEAT">特等座</el-checkbox>
           </el-checkbox-group>
@@ -504,6 +518,12 @@
               />
             </el-radio>
           </el-radio-group>
+          <el-button
+            type="primary"
+            @click="getUserName"
+            style="margin-left: 18px;"
+            :disabled="submitOrderForm.isYS=='Y'"
+          >刷新用户</el-button>
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
@@ -735,13 +755,19 @@ export default {
       } else {
         //console.log(data);
         let ticketArray = [];
-        if (data.data.ticketInfos) {
+        if (data.data.ticketInfos.length>0) {
           ticketArray = this.settingTicketInfo(data.data.ticketInfos);
           this.tableData = ticketArray;
           this.ticketArray = data.data.ticketInfos;
           this.fromStationArray = data.data.fromStations;
           //console.log("fromStations:" + this.fromStationArray);
           this.tabTotal = this.tableData.length;
+          this.tabLoading = false;
+        }else{
+          this.$common.warningMsg("根据搜索条件，暂时没有找到相关的出发车次信息",this);
+          this.tableData=[];
+          this.fromStationArray=[];
+          this.tabTotal=0;
           this.tabLoading = false;
         }
       }
@@ -877,7 +903,7 @@ export default {
         for (let item of ticketInfos) {
           let ticketInfo = {
             trainCode: item.trainCode,
-            from_to_station: item.fromeStationName + " - " + item.toStationMame,
+            from_to_station: item.fromStationName + " - " + item.toStationName,
             from_to_time: item.fromTime + " - " + item.toTime,
             lastTime: item.lastTime,
             businessSeatCount:
@@ -1440,6 +1466,9 @@ export default {
         return false;
       }
 
+      // 保存订单数据
+        localStorage.setItem("order_data", JSON.stringify(params));
+      
       // 准点预售
       if (this.submitOrderForm.isYS == "Y") {
         if (this.submitOrderForm.ysTime == "") {
@@ -1458,31 +1487,30 @@ export default {
           "距离预售时间预计还剩: " + parseInt(residueTime / 1000 / 60) + "/min"
         );
 
-        // 保存订单数据
-        localStorage.setItem("order_data", JSON.stringify(params));
-
-        // 提交订单前10秒重新获取用户名，防止提交订单失效
+        // 提交订单前3秒刷新车票信息并重新获取用户名，防止提交订单失效
         this.excuteGetUserNameId = setTimeout(() => {
-          // 重新获取车票信息
-          this.refushTickets(this.queryForm);
+          this.refushTickets();
           this.getUserName();
-        }, residueTime - 5000);
+        }, residueTime - 3000);
 
         // 设置订单定时任务
         this.excuteSubmitOrderTimeId = setTimeout(() => {
           let orderData = JSON.parse(localStorage.getItem("order_data"));
-          // this.$common.successMsg("测试完成",this);
+          // this.$common.successMsg("测试完成", this);
           this.executeSubmitOrder(orderData);
         }, residueTime);
+
         this.$common.successMsg(
-          "本次订单为准点预售，预计将在" +
-            parseInt(residueTime / 1000 / 60) +
-            "分钟后自动提交订单",
+          "本次订单为准点预售，将在" +
+            this.submitOrderForm.ysTime +
+            "分自动提交订单，届时请留意浏览器提示",
           this
         );
       } else {
+        let orderData = JSON.parse(localStorage.getItem("order_data"));
+        // this.$common.successMsg("测试完成", this);
         // 非准点预售
-        this.executeSubmitOrder(params);
+        this.executeSubmitOrder(orderData);
       }
     },
     // 执行提交订单
@@ -1510,7 +1538,8 @@ export default {
       }
     },
     // 刷新车票信息
-    async refushTickets(params){
+    async refushTickets() {
+      let params = this.queryForm;
       let { data, error } = await api.getTickets(params);
       if (error) {
         console.log(error);
@@ -1518,15 +1547,16 @@ export default {
       } else {
         if (data.data.ticketInfos) {
           let orderData = JSON.parse(localStorage.getItem("order_data"));
-          console.log("befor-ticket:"+JSON.stringify(orderData));
+          console.log("befor-ticket:" + JSON.stringify(orderData));
           for (let item of data.data.ticketInfos) {
             if (orderData.ticketInfo.trainCode == item.trainCode) {
-                orderData.ticketInfo = item;
-                break;
+              orderData.ticketInfo = item;
+              break;
             }
           }
+          this.$common.successMsg("车次刷新成功",this);
           localStorage.setItem("order_data", JSON.stringify(orderData));
-          console.log("after-ticket:"+JSON.stringify(orderData));
+          console.log("after-ticket:" + JSON.stringify(orderData));
         }
       }
     },
