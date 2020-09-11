@@ -51,6 +51,9 @@ const checkSlidePassCodeForOrder=params=>api.post('/max/checkSlidePassCodeForOrd
 // 提交订单
 const submitOrderRequest=params=>api.post('/max/submitOrder',params);
 
+// 获取可用cdn数量
+const getCdnCount=params=>api.get('/max/getCdnCount',params);
+
 export default {
     getStations,
     getTickets,
@@ -68,5 +71,6 @@ export default {
     addPassengers,
     getNoCompleteOrder,
     checkSlidePassCodeForOrder,
-    submitOrderRequest
+    submitOrderRequest,
+    getCdnCount
 }

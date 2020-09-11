@@ -188,7 +188,7 @@
                   <el-col class="span-content">查询间隔：1.5/s</el-col>
                 </el-row>
                 <el-row>
-                  <el-col class="span-content span-content-space">可用CDN：100</el-col>
+                  <el-col class="span-content span-content-space">可用CDN：{{cdnCount}}</el-col>
                 </el-row>
               </el-col>
               <el-col :span="12">
@@ -224,10 +224,15 @@
       </el-header>
       <el-main class="main-content">
         <!-- <h2>主体内容</h2> -->
+        <div style="text-align: right;">
+          <el-tag type="success">有票</el-tag>
+          <el-tag type="warning">无票</el-tag>
+          <el-tag type="danger">未开售&nbsp;&nbsp;/&nbsp;&nbsp;列车运行图调整，暂停发售</el-tag>
+        </div>
         <el-table
           stripe
           :data="tableData"
-          height="530"
+          height="500"
           border
           style="width: 100%"
           v-loading="tabLoading"
@@ -252,9 +257,15 @@
           <el-table-column prop="other" label="其他" align="center"></el-table-column>
           <el-table-column prop="remark" label="备注" width="120" align="center">
             <template slot-scope="scope">
-              <span v-if="scope.row.canBuy=='Y'" style="color: #37B328">{{ scope.row.remark }}</span>
-              <span v-else-if="scope.row.canBuy=='N'" style="color: #E6A23C">{{ scope.row.remark }}</span>
-              <span v-else style="color: red">{{ scope.row.remark }}</span>
+              <span
+                v-if="scope.row.canBuy=='Y'"
+                style="color: #37B328;font-weight: bold;"
+              >{{ scope.row.remark }}</span>
+              <span
+                v-else-if="scope.row.canBuy=='N'"
+                style="color: #E6A23C;font-weight: bold;"
+              >{{ scope.row.remark }}</span>
+              <span v-else style="color: red;font-weight: bold;">{{ scope.row.remark }}</span>
             </template>
           </el-table-column>
           <el-table-column label="操作" align="center">
@@ -462,7 +473,7 @@
       title="提交订单"
       :visible.sync="submitOrderDiaVis"
       @close="submitOrderDiaVisClose('submitOrderForm')"
-      width="58%"
+      width="68%"
       center
     >
       <el-form :label-position="labelPosition" ref="submitOrderForm" :model="submitOrderForm">
@@ -482,15 +493,17 @@
         </el-form-item>
         <el-form-item label="选座位：" prop="seatType">
           <el-checkbox-group v-model="submitOrderForm.seatType">
+            <el-checkbox label="BUSINESS_SEAT" key="BUSINESS_SEAT">商务座</el-checkbox>
             <el-checkbox label="FIRST_SEAT" key="FIRST_SEAT">一等座</el-checkbox>
             <el-checkbox label="SECOND_SEAT" key="SECOND_SEAT">二等座</el-checkbox>
-            <el-checkbox label="HARD_SLEEP" key="HARD_SLEEP">硬卧</el-checkbox>
             <el-checkbox label="SOFT_SLEEP" key="SOFT_SLEEP">软卧</el-checkbox>
+            <el-checkbox label="HARD_SLEEP" key="HARD_SLEEP">硬卧</el-checkbox>
             <el-checkbox label="HARD_SEAT" key="HARD_SEAT">硬座</el-checkbox>
-            <el-checkbox label="BUSINESS_SEAT" key="BUSINESS_SEAT">商务座</el-checkbox>
-            <el-checkbox label="HIGH_SOFT_SLEEP" key="HIGH_SOFT_SLEEP">高级软卧</el-checkbox>
-            <el-checkbox label="SOFT_SEAT" key="SOFT_SEAT">软座</el-checkbox>
             <el-checkbox label="NONE_SEAT" key="NONE_SEAT">无座</el-checkbox>
+            <el-checkbox label="HIGH_SOFT_SLEEP" key="HIGH_SOFT_SLEEP">高级软卧</el-checkbox>
+            <el-checkbox label="SECOND_SOFT_SLEEP" key="SECOND_SOFT_SLEEP">动车：二等卧</el-checkbox>
+            <el-checkbox label="FIRST_SOFT_SLEEP" key="FIRST_SOFT_SLEEP">动车：一等卧</el-checkbox>
+            <el-checkbox label="SOFT_SEAT" key="SOFT_SEAT">软座</el-checkbox>
             <el-checkbox label="SPECIAL_SEAT" key="SPECIAL_SEAT">特等座</el-checkbox>
           </el-checkbox-group>
         </el-form-item>
@@ -696,6 +709,7 @@ export default {
       labelPosition: "right",
       excuteSubmitOrderTimeId: "", // 定时提交订单ID
       excuteGetUserNameId: "", // 定时获取用户名
+      cdnCount: 0, // 可用cdn数量
     };
   },
   mounted() {
@@ -707,7 +721,8 @@ export default {
       return false;
     }
     this.getUserName(); // 获取用户名
-    this.getStations();
+    this.getStations(); // 获取车站
+    this.getCdnCount(); // 获取可用cdn
     this.percentageStartTimeId = setInterval(() => {
       this.percentageValTimer(5);
     }, 5000);
@@ -755,7 +770,7 @@ export default {
       } else {
         //console.log(data);
         let ticketArray = [];
-        if (data.data.ticketInfos.length>0) {
+        if (data.data.ticketInfos.length > 0) {
           ticketArray = this.settingTicketInfo(data.data.ticketInfos);
           this.tableData = ticketArray;
           this.ticketArray = data.data.ticketInfos;
@@ -763,11 +778,14 @@ export default {
           //console.log("fromStations:" + this.fromStationArray);
           this.tabTotal = this.tableData.length;
           this.tabLoading = false;
-        }else{
-          this.$common.warningMsg("根据搜索条件，暂时没有找到相关的出发车次信息",this);
-          this.tableData=[];
-          this.fromStationArray=[];
-          this.tabTotal=0;
+        } else {
+          this.$common.warningMsg(
+            "根据搜索条件，暂时没有找到相关的出发车次信息",
+            this
+          );
+          this.tableData = [];
+          this.fromStationArray = [];
+          this.tabTotal = 0;
           this.tabLoading = false;
         }
       }
@@ -1467,8 +1485,8 @@ export default {
       }
 
       // 保存订单数据
-        localStorage.setItem("order_data", JSON.stringify(params));
-      
+      localStorage.setItem("order_data", JSON.stringify(params));
+
       // 准点预售
       if (this.submitOrderForm.isYS == "Y") {
         if (this.submitOrderForm.ysTime == "") {
@@ -1507,6 +1525,8 @@ export default {
           this
         );
       } else {
+        // this.refushTickets();
+        this.getUserName();
         let orderData = JSON.parse(localStorage.getItem("order_data"));
         // this.$common.successMsg("测试完成", this);
         // 非准点预售
@@ -1554,12 +1574,13 @@ export default {
               break;
             }
           }
-          this.$common.successMsg("车次刷新成功",this);
+          this.$common.successMsg("车次刷新成功", this);
           localStorage.setItem("order_data", JSON.stringify(orderData));
           console.log("after-ticket:" + JSON.stringify(orderData));
         }
       }
     },
+    // 获取选中的车次
     selectTicket(row) {
       console.log(row);
       let ticket = {};
@@ -1579,6 +1600,16 @@ export default {
     },
     submitOrderDiaVisClose(formName) {
       this.$refs[formName].resetFields();
+    },
+    // 获取可用cdn数量
+    async getCdnCount() {
+      let params = {};
+      let { data, error } = await api.getCdnCount(params);
+      if (error) {
+        console.log(error);
+      } else {
+        this.cdnCount = data.data;
+      }
     },
   },
 };

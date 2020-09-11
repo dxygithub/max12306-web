@@ -155,15 +155,15 @@ export default {
           this.capthChaPos = [];
 
           // 初始化滑块验证 -- 2020-09-09 登录取消滑块验证
-          // this.initSalisPassPort();
+          this.initSalisPassPort();
 
-          // 开始登录
-          var formData = {};
-          formData["username"] = this.loginForm.userName;
-          formData["password"] = "@" + SM4.encrypt_ecb(this.loginForm.password, this.SM4_key);
-          formData["appid"] = "otn"; // popup_passport_appId
-          formData["answer"] = resArr[1];
-          this.userLogin(formData);
+          // 开始校验图片验证码登录 
+          // var formData = {};
+          // formData["username"] = this.loginForm.userName;
+          // formData["password"] = "@" + SM4.encrypt_ecb(this.loginForm.password, this.SM4_key);
+          // formData["appid"] = "otn"; // popup_passport_appId
+          // formData["answer"] = resArr[1];
+          // this.userLogin(formData);
         } else {
           this.$common.errorMsg(data.message, this);
           // 清空点击标记
