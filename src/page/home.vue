@@ -1508,7 +1508,7 @@ export default {
         // 提交订单前3秒刷新车票信息并重新获取用户名，防止提交订单失效
         this.excuteGetUserNameId = setTimeout(() => {
           this.refushTickets();
-          this.getUserName();
+          // this.getUserName();
         }, residueTime - 3000);
 
         // 设置订单定时任务
@@ -1526,7 +1526,7 @@ export default {
         );
       } else {
         // this.refushTickets();
-        this.getUserName();
+        // this.getUserName();
         let orderData = JSON.parse(localStorage.getItem("order_data"));
         // this.$common.successMsg("测试完成", this);
         // 非准点预售
