@@ -3,13 +3,13 @@
     <el-container>
       <el-header class="top-content" style="height:80px;">
         <el-row :gutter="20" style="margin-top: 6px;">
-          <el-col :span="4">
+          <el-col :span="6">
             <div class="top-left">
               <el-button type="primary" @click="myOrder">我的订单</el-button>
               <el-button type="primary" @click="passengersDiaVis=true">乘车人</el-button>
             </div>
           </el-col>
-          <el-col :span="15">
+          <el-col :span="13">
             <div class="top-middle">
               <h1 class="top-title">12306 - Max</h1>
             </div>
