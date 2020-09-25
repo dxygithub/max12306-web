@@ -54,6 +54,9 @@ const submitOrderRequest=params=>api.post('/max/submitOrder',params);
 // 获取可用cdn数量
 const getCdnCount=params=>api.get('/max/getCdnCount',params);
 
+// 余票捡漏
+const monitorTicketsLeft=params=>api.post('/max/monitorTicketsLeft',params);
+
 export default {
     getStations,
     getTickets,
@@ -72,5 +75,6 @@ export default {
     getNoCompleteOrder,
     checkSlidePassCodeForOrder,
     submitOrderRequest,
-    getCdnCount
+    getCdnCount,
+    monitorTicketsLeft
 }

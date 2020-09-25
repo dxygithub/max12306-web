@@ -82,7 +82,7 @@ export default {
       jqueryCallBack: "",
       capthChaPos: [], // 验证码坐标位置
       centerDialogVisible: false,
-      appKey: "FFFF0N000000000085DE", // appkey后期可能会变
+      appKey: "FFFF0N000000000097AD", // appkey后期可能会变：(2020-09-24,FFFF0N000000000097AD)
       scene: "nc_login",
       appId: "otn",
       SM4_key: "tiekeyuankp12306", // 加密字符串

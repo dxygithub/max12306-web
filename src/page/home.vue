@@ -3,13 +3,13 @@
     <el-container>
       <el-header class="top-content" style="height:80px;">
         <el-row :gutter="20" style="margin-top: 6px;">
-          <el-col :span="6">
+          <el-col :span="4">
             <div class="top-left">
               <el-button type="primary" @click="myOrder">我的订单</el-button>
               <el-button type="primary" @click="passengersDiaVis=true">乘车人</el-button>
             </div>
           </el-col>
-          <el-col :span="13">
+          <el-col :span="15">
             <div class="top-middle">
               <h1 class="top-title">12306 - Max</h1>
             </div>
@@ -185,7 +185,7 @@
               <el-col :span="6">
                 &nbsp;
                 <el-row>
-                  <el-col class="span-content">查询间隔：1.5/s</el-col>
+                  <el-col class="span-content">查询间隔：3.0/s</el-col>
                 </el-row>
                 <el-row>
                   <el-col class="span-content span-content-space">可用CDN：{{cdnCount}}</el-col>
@@ -197,8 +197,9 @@
                   <el-col>
                     <el-input
                       type="textarea"
+                      disabled
                       class="console-log"
-                      :rows="6"
+                      :rows="7"
                       resize="none"
                       v-model="consoleLog"
                     ></el-input>
@@ -212,9 +213,27 @@
                     <el-button
                       class="start-btn"
                       type="primary"
-                      @click="submitOrderDiaVis=true"
+                      @click="orderMainSetting(1)"
                       plain
-                    >开始下单</el-button>
+                    >抢票设置</el-button>
+                  </el-col>
+                </el-row>
+                <el-row>
+                  <el-col class="start">
+                    <el-button
+                      v-if="isStartTicketBug==false"
+                      class="start-btn"
+                      type="primary"
+                      @click="orderMainSetting(2)"
+                      plain
+                    >捡漏设置</el-button>
+                    <el-button
+                      v-if="isStartTicketBug"
+                      class="start-btn"
+                      type="primary"
+                      @click="stopTicketBug"
+                      plain
+                    >停止捡漏</el-button>
                   </el-col>
                 </el-row>
               </el-col>
@@ -225,18 +244,22 @@
       <el-main class="main-content">
         <!-- <h2>主体内容</h2> -->
         <div style="text-align: right;">
-          <el-tag type="success">有票</el-tag>
-          <el-tag type="warning">无票</el-tag>
-          <el-tag type="danger">未开售&nbsp;&nbsp;/&nbsp;&nbsp;列车运行图调整，暂停发售</el-tag>
+          <el-tag v-if="isStartTicketBug" type="warning">目前正在进行余票捡漏，不建议查询其他余票信息，查询其他余票信息会中断余票捡漏</el-tag>
+          <el-tag v-if="isStartTicketBug==false" type="success">有票</el-tag>
+          <el-tag v-if="isStartTicketBug==false" type="warning">无票</el-tag>
+          <el-tag
+            v-if="isStartTicketBug==false"
+            type="danger"
+          >未开售&nbsp;&nbsp;/&nbsp;&nbsp;列车停运&nbsp;&nbsp;/&nbsp;&nbsp;列车运行图调整，暂停发售</el-tag>
         </div>
         <el-table
           stripe
           :data="tableData"
-          height="500"
+          height="468"
           border
           style="width: 100%"
           v-loading="tabLoading"
-          @select="selectTicket"
+          @selection-change="selectTicket"
           @row-dbclick="queryTicketPrice"
         >
           <el-table-column type="selection" width="55" align="center"></el-table-column>
@@ -255,7 +278,7 @@
           <el-table-column prop="hardSeatCount" label="硬座" align="center"></el-table-column>
           <el-table-column prop="noneSeatCount" label="无座" align="center"></el-table-column>
           <el-table-column prop="other" label="其他" align="center"></el-table-column>
-          <el-table-column prop="remark" label="备注" width="120" align="center">
+          <el-table-column prop="remark" label="备注" width="130" align="center">
             <template slot-scope="scope">
               <span
                 v-if="scope.row.canBuy=='Y'"
@@ -268,7 +291,7 @@
               <span v-else style="color: red;font-weight: bold;">{{ scope.row.remark }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" align="center">
+          <el-table-column label="操作" width="102" align="center">
             <template slot-scope="scope">
               <el-button round size="mini" @click="queryTicketPrice(scope.row)">查看票价</el-button>
             </template>
@@ -470,26 +493,47 @@
 
     <!--提交订单表单-->
     <el-dialog
-      title="提交订单"
+      :title="isTicketBug=='N'?'提交订单':'捡漏设置'"
       :visible.sync="submitOrderDiaVis"
       @close="submitOrderDiaVisClose('submitOrderForm')"
       width="68%"
       center
     >
       <el-form :label-position="labelPosition" ref="submitOrderForm" :model="submitOrderForm">
-        <el-form-item label="出发车次：">
+        <el-form-item>
           <label>
-            {{submitOrderForm.ticketInfo.trainCode}}&nbsp;&nbsp;/&nbsp;&nbsp;
-            {{submitOrderForm.ticketInfo.fromStationName}}&nbsp;&nbsp;- >&nbsp;&nbsp;
-            {{submitOrderForm.ticketInfo.toStationName}}&nbsp;&nbsp;/&nbsp;&nbsp;
+            <!-- {{submitOrderForm.ticketInfo.fromStationName}}&nbsp;&nbsp;- >&nbsp;&nbsp;
+            {{submitOrderForm.ticketInfo.toStationName}}&nbsp;&nbsp;/&nbsp;&nbsp;-->
+            发车时间：
             {{queryForm.fromDate}}&nbsp;&nbsp;{{submitOrderForm.ticketInfo.fromTime}}
           </label>
           <el-button
+            v-if="isTicketBug=='N'"
             type="primary"
             @click="refushTickets"
             style="margin-left: 20px;"
             :disabled="Object.keys(submitOrderForm.ticketInfo).length == 0"
           >刷新已选车次</el-button>
+        </el-form-item>
+        <el-form-item label="出发车次：">
+          <!--抢票-->
+          <label v-if="isTicketBug=='N'">
+            <el-radio-group v-model="submitOrderForm.selectTicket">
+              <el-radio
+                v-for="item in submitOrderForm.ticketInfo"
+                :key="item.trainCode"
+                class="radio-style"
+                :label="item.trainCode"
+              >{{item.trainCode}}</el-radio>
+            </el-radio-group>
+          </label>
+          <!--捡漏-->
+          <label v-if="isTicketBug=='Y'">
+            <span
+              v-for="item in submitOrderForm.ticketInfo"
+              :key="item.trainCode"
+            >{{item.trainCode}}&nbsp;&nbsp;&nbsp;&nbsp;</span>
+          </label>
         </el-form-item>
         <el-form-item label="选座位：" prop="seatType">
           <el-checkbox-group v-model="submitOrderForm.seatType">
@@ -516,7 +560,7 @@
             >{{item.passengerName}}</el-checkbox>
           </el-checkbox-group>
         </el-form-item>
-        <el-form-item label="是否预售：" prop="isYS">
+        <el-form-item v-if="isTicketBug=='N'" label="是否预售：" prop="isYS">
           <el-radio-group v-model="submitOrderForm.isYS">
             <el-radio class="radio-style" label="N">否</el-radio>
             <el-radio label="Y">
@@ -538,9 +582,16 @@
             :disabled="submitOrderForm.isYS=='Y'"
           >刷新用户</el-button>
         </el-form-item>
+        <!-- <el-form-item label="是否捡漏：" prop="isTicketBug">
+          <el-radio-group v-model="submitOrderForm.isTicketBug">
+            <el-radio class="radio-style" label="N">否</el-radio>
+            <el-radio class="radio-style" label="Y">是</el-radio>
+          </el-radio-group>
+        </el-form-item>-->
       </el-form>
       <span slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitOrder">确 定</el-button>
+        <el-button type="primary" @click="submitOrder" v-if="isTicketBug=='N'">提交</el-button>
+        <el-button type="primary" @click="startTicketBug" v-if="isTicketBug=='Y'">开始</el-button>
         <el-button type="primary" @click="submitOrderDiaVis=false">取 消</el-button>
       </span>
     </el-dialog>
@@ -605,11 +656,12 @@ export default {
         mobileNo: "", // 手机号码
       },
       submitOrderForm: {
-        ticketInfo: {}, // 车票信息
+        ticketInfo: [], // 车票信息
         passengerInfoList: [], // 乘车人信息
         seatType: [], // 座位类型
         isYS: "N", // 是否预售
         ysTime: "", // 预售时间
+        selectTicket: "", // 提交订单时选择的车次
       },
       rules: {
         fromStationCode: {
@@ -649,10 +701,7 @@ export default {
       trainCodeType: [], // 车次类型
       fromStation: [], // 出发车站
       fromStationArray: [], // 所有出发车站
-      // 控制台日志
-      consoleLog:
-        "2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n" +
-        "2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n2020-08-22 13:13:56 => 第[23523]次，查询间隔[1.5s]\n",
+      consoleLog: "", // 控制台日志
       tableData: [], // table数据
       ticketArray: [], // 元数据
       tabLoading: false,
@@ -668,6 +717,10 @@ export default {
       addPassDiaVis: false,
       orderDiaVis: false,
       slideDiaVis: false,
+      isTicketBug: "N", // 是否捡漏
+      isStartTicketBug: false, // 是否开始捡漏
+      queryTicketCount: 0, // 余票监控查询累计次数
+      ticketBugTimerId: "",
       submitOrderDiaVis: false,
       ticketPrice: {
         trainCode: "",
@@ -704,7 +757,7 @@ export default {
       activeName: "first",
       orderHistory: [], // 历史订单
       noCompleteOrder: [], // 未完成订单
-      appKey: "FFFF0N000000000085DE", // appkey后期可能会变
+      appKey: "FFFF0N000000000097AD", // appkey后期可能会变：(2020-09-24,FFFF0N000000000097AD)
       scene: "nc_login",
       labelPosition: "right",
       excuteSubmitOrderTimeId: "", // 定时提交订单ID
@@ -756,7 +809,20 @@ export default {
       this.$refs[queryForm].validate((flag) => {
         if (flag) {
           let params = this.queryForm;
-          this.queryTickets(params);
+          if (this.isStartTicketBug) {
+            this.$common.confirm(
+              "目前正在进行余票捡漏，不建议查询其他余票信息，查询其他余票信息会中断余票捡漏，是否继续查询其他余票信息？",
+              "查询提示",
+              () => {
+                this.isStartTicketBug = false;
+                clearInterval(this.ticketBugTimerId);
+                this.queryTickets(params);
+              },
+              this
+            );
+          } else {
+            this.queryTickets(params);
+          }
         }
       });
     },
@@ -1435,9 +1501,11 @@ export default {
         this.$common.errorMsg("订单提交失败", this);
       } else {
         if (data.code === 200) {
+          this.consoleLog=this.currentTime+" => 出票成功 . . .\n"+data.message+"\n"+this.consoleLog;
           // 订单出票成功
           this.$common.confirm(data.message, "订单提示", () => {}, this);
         } else {
+          this.consoleLog=this.currentTime+" => 出票失败 . . .\n原因："+data.message+"\n"+this.consoleLog;
           // 订单出票失败
           this.$common.confirm(data.message, "订单提示", () => {}, this);
         }
@@ -1454,12 +1522,20 @@ export default {
           }
         }
       }
+
+      let ticketInfo = {};
+      for (let item of this.submitOrderForm.ticketInfo) {
+        if (this.submitOrderForm.selectTicket == item.trainCode) {
+          ticketInfo = item;
+          break;
+        }
+      }
       let params = {
         fromStationCode: this.queryForm.fromStationCode, // 出发地车站编号
         toStationCode: this.queryForm.toStationCode, // 目的地车站编号
         fromDate: this.queryForm.fromDate, // 出发日期
         ticketType: "TICKETS",
-        ticketInfo: this.submitOrderForm.ticketInfo, // 车票信息
+        ticketInfo: ticketInfo, // 车票信息
         passengerInfoList: passArr, // 乘车人信息
         seatType: this.submitOrderForm.seatType[0], // 座位类型
       };
@@ -1535,7 +1611,9 @@ export default {
     },
     // 执行提交订单
     async executeSubmitOrder(params) {
+      this.consoleLog=this.currentTime+" => 开始提交订单 . . .\n"+this.consoleLog;
       let loadingid = this.$common.loading("订单正在预定中，请稍等...", this);
+      this.consoleLog=this.currentTime+" => 订单正在提交中，请耐心等待 . . .\n"+this.consoleLog;
       let { data, error } = await api.submitOrderRequest(params);
       // 关闭遮罩层
       loadingid.close();
@@ -1546,13 +1624,16 @@ export default {
         console.log("本次订单提交结果: " + JSON.stringify(data));
         if (data.code == 200) {
           if (data.isSlidePassCode == 1) {
+             this.consoleLog=this.currentTime+" => 订单提示：\n本次订单提交需要滑块验证，请注意浏览器页面出现的滑块 . . .\n"+this.consoleLog;
             // 本次订单，需要滑块验证，准备初始化滑块验证
             this.getSlidePasscode(data.data.ifCheckSlidePasscodeToken);
           } else if (data.isSlidePassCode == 0) {
+            this.consoleLog=this.currentTime+" => 出票成功 . . .\n"+data.message+"\n"+this.consoleLog;
             // 本次订单，不需要滑块验证，并出票成功
             this.$common.confirm(data.message, "订单提示", () => {}, this);
           }
         } else {
+          this.consoleLog=this.currentTime+" => 出票失败 . . .\n原因："+data.message+"\n"+this.consoleLog;
           this.$common.confirm(data.message, "订单提示", () => {}, this);
         }
       }
@@ -1581,25 +1662,26 @@ export default {
       }
     },
     // 获取选中的车次
-    selectTicket(row) {
-      console.log(row);
-      let ticket = {};
-      for (let tick of row) {
+    selectTicket(val) {
+      console.log(val);
+      let ticket = [];
+      for (let tick of val) {
         for (let item of this.ticketArray) {
           if (tick.trainCode == item.trainCode) {
-            ticket = item;
+            ticket.push(item);
             break;
           }
         }
-        if (ticket != null) {
-          break;
-        }
       }
+
       this.submitOrderForm.ticketInfo = ticket;
       console.log("车票信息:" + QS.stringify(this.submitOrderForm.ticketInfo));
     },
     submitOrderDiaVisClose(formName) {
-      this.$refs[formName].resetFields();
+      // 余票捡漏时，不清空表单内容
+      if (!this.isStartTicketBug) {
+        this.$refs[formName].resetFields();
+      }
     },
     // 获取可用cdn数量
     async getCdnCount() {
@@ -1610,6 +1692,183 @@ export default {
       } else {
         this.cdnCount = data.data;
       }
+    },
+    // 订单主界面操作配置
+    orderMainSetting(operate) {
+      if (operate == 1) {
+        // 抢票配置
+        if (this.isStartTicketBug) {
+          this.$common.warningMsg(
+            "目前正在进行余票捡漏，不可进行抢票，如需抢票，请先停止余票捡漏",
+            this
+          );
+          return false;
+        }
+        this.isTicketBug = "N";
+      } else {
+        // 捡漏配置
+        this.isTicketBug = "Y";
+      }
+      this.submitOrderDiaVis = true;
+    },
+    // 余票捡漏
+    async TicketBugSetting() {
+      let passArr = [];
+      let trainCodes = [];
+      for (let pass of this.submitOrderForm.passengerInfoList) {
+        for (let item of this.passengersData) {
+          if (pass == item.passengerName) {
+            passArr.push(item);
+            break;
+          }
+        }
+      }
+      for (let item of this.submitOrderForm.ticketInfo) {
+        trainCodes.push(item.trainCode);
+      }
+      let params = {
+        fromStationCode: this.queryForm.fromStationCode, // 出发地车站编号
+        toStationCode: this.queryForm.toStationCode, // 目的地车站编号
+        fromDateList: [this.queryForm.fromDate], // 出发日期
+        ticketType: "TICKETS",
+        passengerInfos: passArr, // 乘车人信息
+        seatTypes: this.submitOrderForm.seatType, // 座位类型
+        trainCodeList: trainCodes,
+      };
+      // debugger;
+      let { data, error } = await api.monitorTicketsLeft(params);
+      if (error) {
+        console.log(error);
+      } else {
+        this.queryTicketCount = this.queryTicketCount + 1;
+        let queryResultMsg =
+          "" +
+          this.currentTime +
+          " => 第[" +
+          this.queryTicketCount +
+          "]次，查询间隔[3.0]s\n";
+        this.consoleLog = queryResultMsg + this.consoleLog;
+        if (data.code == 500 && data.data.ticket) {
+          let queryResultMsg =this.currentTime+" => 监控到有符合条件的车次：\n余票监控结果 -> 车次："+data.data.ticket.trainCode+"，余票数量："+data.data.count+"，座位："+this.convertSeatType(data.data.seatType)+"\n";
+          this.consoleLog = queryResultMsg + this.consoleLog;
+          // 监测到有余票，开始准备订单提交操作
+          let ticketBugParams = {
+            fromStationCode: this.queryForm.fromStationCode, // 出发地车站编号
+            toStationCode: this.queryForm.toStationCode, // 目的地车站编号
+            fromDate: this.queryForm.fromDate, // 出发日期
+            ticketType: "TICKETS",
+            ticketInfo: data.data.ticket, // 车票信息
+            passengerInfoList: data.data.passengerInfos, // 乘车人信息
+            seatType: data.data.seatType, // 座位类型
+          };
+          // 保存订单数据
+          // localStorage.setItem("order_data", JSON.stringify(ticketBugParams));
+          // 停止余票监控
+          this.isStartTicketBug = false;
+          clearInterval(this.ticketBugTimerId);
+          // 开始提交订单
+          this.executeSubmitOrder(ticketBugParams);
+        }
+      }
+    },
+    // 停止余票捡漏
+    stopTicketBug() {
+      this.$common.confirm(
+        "确定要停止余票捡漏吗？",
+        "监控提示",
+        () => {
+          this.isStartTicketBug = false;
+          clearInterval(this.ticketBugTimerId);
+        },
+        this
+      );
+    },
+    // 开始余票捡漏
+    startTicketBug() {
+      if (this.submitOrderForm.ticketInfo.length == 0) {
+        this.$common.errorMsg("请选择出发车次", this);
+        return false;
+      } else if (this.submitOrderForm.passengerInfoList.length == 0) {
+        this.$common.errorMsg("请选择乘车人", this);
+        return false;
+      } else if (this.submitOrderForm.seatType.length == 0) {
+        this.$common.errorMsg("请选择座位", this);
+        return false;
+      }
+      let trainCodeStr = "";
+      for (let item of this.submitOrderForm.ticketInfo) {
+        trainCodeStr = trainCodeStr + item.trainCode + "\t\t";
+      }
+      let seatTypeStr = "";
+      for (let item of this.submitOrderForm.seatType) {
+        let seatTypeName = this.convertSeatType(item);
+        seatTypeStr = seatTypeStr + seatTypeName + "\t\t";
+      }
+      let passStr = "";
+      for (let item of this.submitOrderForm.passengerInfoList) {
+        passStr = passStr + item + "\t\t";
+      }
+      let msg =
+        "出发日期：" +
+        this.queryForm.fromDate +
+        "车次：" +
+        trainCodeStr +
+        "座位：" +
+        seatTypeStr +
+        "乘车人：" +
+        passStr;
+
+      let newDatas = [];
+      const h = this.$createElement;
+      newDatas.push(h("p", null, "在捡漏前请确认以下信息是否选择无误："));
+      newDatas.push(h("p", null, "出发日期：" + this.queryForm.fromDate));
+      newDatas.push(h("p", null, "车次：" + trainCodeStr));
+      newDatas.push(h("p", null, "座位：" + seatTypeStr));
+      newDatas.push(h("p", null, "乘车人：" + passStr));
+      this.$common.confirm(
+        h("div", null, newDatas),
+        "余票捡漏",
+        () => {
+          this.isStartTicketBug = true;
+          this.consoleLog = ""; // 清空控制台监控日志
+          this.queryTicketCount = 0; // 清空监控次数
+          this.submitOrderDiaVis = false;
+          this.$common.successMsg("开始余票捡漏", this);
+          this.ticketBugTimerId = setInterval(() => {
+            this.TicketBugSetting();
+          }, 3000);
+        },
+        this
+      );
+    },
+    convertSeatType(seatTypeCode) {
+      let result = "";
+      if (seatTypeCode == "FIRST_SEAT") {
+        result = "一等座";
+      } else if (seatTypeCode == "SECOND_SEAT") {
+        result = "二等座";
+      } else if (seatTypeCode == "BUSINESS_SEAT") {
+        result = "商务座";
+      } else if (seatTypeCode == "HIGH_SOFT_SLEEP") {
+        result = "高级软卧";
+      } else if (seatTypeCode == "SOFT_SLEEP") {
+        result = "软卧";
+      } else if (seatTypeCode == "HARD_SLEEP") {
+        result = "硬卧";
+      } else if (seatTypeCode == "SOFT_SEAT") {
+        result = "软座";
+      } else if (seatTypeCode == "HARD_SEAT") {
+        result = "硬座";
+      } else if (seatTypeCode == "NONE_SEAT") {
+        result = "无座";
+      } else if (seatTypeCode == "SECOND_SOFT_SLEEP") {
+        result = "动车二等卧";
+      } else if (seatTypeCode == "FIRST_SOFT_SLEEP") {
+        result = "动车一等卧";
+      } else if (seatTypeCode == "SPECIAL_SEAT") {
+        result = "特等座";
+      }
+      return result;
     },
   },
 };
@@ -1665,7 +1924,7 @@ export default {
   text-align: left;
 }
 .start-btn {
-  height: 96px;
+  height: 54px;
   margin-left: 20px;
   margin-top: 28px;
 }
@@ -1681,6 +1940,10 @@ export default {
 }
 .console-log {
   margin-top: 6px;
+  font-size: 13px;
+}
+.console-log /deep/ .el-textarea__inner{
+  color: black;
 }
 .time-style {
   color: #409eff;
