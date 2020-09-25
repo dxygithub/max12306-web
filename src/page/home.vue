@@ -784,12 +784,15 @@ export default {
     }, 1000);
   },
   beforeDestroy: function () {
-    // 实力销毁前清除定时器
+    // 实力销毁前清除所有定时器
     if (this.timeId) {
       clearInterval(this.timeId);
     }
     if (this.percentageStartTimeId) {
       clearInterval(this.percentageStartTimeId);
+    }
+    if(this.ticketBugTimerId){
+      clearInterval(this.ticketBugTimerId);
     }
   },
   methods: {
