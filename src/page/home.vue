@@ -1751,7 +1751,7 @@ export default {
           this.queryTicketCount +
           "]次，查询间隔[3.0]s\n";
         this.consoleLog = queryResultMsg + this.consoleLog;
-        if (data.code == 500 && data.data.ticket) {
+        if (data.code == 200 && data.data.ticket) {
           let queryResultMsg =this.currentTime+" => 监控到有符合条件的车次：\n余票监控结果 -> 车次："+data.data.ticket.trainCode+"，余票数量："+data.data.count+"，座位："+this.convertSeatType(data.data.seatType)+"\n";
           this.consoleLog = queryResultMsg + this.consoleLog;
           // 监测到有余票，开始准备订单提交操作
@@ -1899,7 +1899,7 @@ export default {
 .select-style {
   width: 124px;
 }
-.select-date-style {
+.el-date-editor.el-input.select-date-style {
   width: 150px;
 }
 .select-send-train-date-style {
