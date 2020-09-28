@@ -1941,7 +1941,7 @@ export default {
   text-align: left;
   padding: 20px 0px;
 }
-.console-log {
+.el-textarea.console-log {
   margin-top: 6px;
   font-size: 13px;
 }
