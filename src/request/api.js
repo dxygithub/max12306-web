@@ -57,6 +57,9 @@ const getCdnCount=params=>api.get('/max/getCdnCount',params);
 // 余票捡漏
 const monitorTicketsLeft=params=>api.post('/max/monitorTicketsLeft',params);
 
+// 获取登录校验的AppKey
+const getLoginAppKey=params=>api.get('/max/getLoginAppKey',params);
+
 export default {
     getStations,
     getTickets,
@@ -76,5 +79,6 @@ export default {
     checkSlidePassCodeForOrder,
     submitOrderRequest,
     getCdnCount,
-    monitorTicketsLeft
+    monitorTicketsLeft,
+    getLoginAppKey
 }

@@ -283,11 +283,11 @@
               <span
                 v-if="scope.row.canBuy=='Y'"
                 style="color: #37B328;font-weight: bold;"
-              >{{ scope.row.remark }}</span>
+              >有票</span>
               <span
                 v-else-if="scope.row.canBuy=='N'"
                 style="color: #E6A23C;font-weight: bold;"
-              >{{ scope.row.remark }}</span>
+              >无票</span>
               <span v-else style="color: red;font-weight: bold;">{{ scope.row.remark }}</span>
             </template>
           </el-table-column>
@@ -1385,6 +1385,11 @@ export default {
         this.$common.errorMsg(error, this);
         return false;
       } else {
+        if(data.code==500){
+          this.$common.errorMsg(data.message, this);
+          this.noCompleteOrderLoad = false;
+          return false;
+        }
         let orderData = data.data;
         let noCompleteOrderArr = [];
         if (orderData.length > 0) {

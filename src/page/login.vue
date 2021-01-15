@@ -82,7 +82,7 @@ export default {
       jqueryCallBack: "",
       capthChaPos: [], // 验证码坐标位置
       centerDialogVisible: false,
-      appKey: "FFFF0N000000000097AD", // appkey后期可能会变：(2020-09-24,FFFF0N000000000097AD)
+      appKey: "", // appkey
       scene: "nc_login",
       appId: "otn",
       SM4_key: "tiekeyuankp12306", // 加密字符串
@@ -94,7 +94,10 @@ export default {
   mounted() {
     // 提供jquery使用:_this
     const _this = this;
+    // 初始化图片验证码
     this.getImgCapthcha();
+    // 获取appKey
+    this.getLoginAppKey();
 
     $(".wrap").click(function (e) {
       var radius = 0; //半径
@@ -154,16 +157,8 @@ export default {
           // 清空坐标数组
           this.capthChaPos = [];
 
-          // 初始化滑块验证 -- 2020-09-09 登录取消滑块验证
-          this.initSalisPassPort();
-
-          // 开始校验图片验证码登录 
-          // var formData = {};
-          // formData["username"] = this.loginForm.userName;
-          // formData["password"] = "@" + SM4.encrypt_ecb(this.loginForm.password, this.SM4_key);
-          // formData["appid"] = "otn"; // popup_passport_appId
-          // formData["answer"] = resArr[1];
-          // this.userLogin(formData);
+          // 初始化滑块验证
+          this.initSalisPassPort(resArr);
         } else {
           this.$common.errorMsg(data.message, this);
           // 清空点击标记
@@ -181,15 +176,15 @@ export default {
       let { data, error } = await api.getImgCapthcha(params);
       if (error) {
         console.log(error);
-        this.$common.errorMsg("获取验证码失败", this);
+        this.$common.errorMsg("获取图片验证码失败", this);
       } else {
         this.jqueryCallBack = data.data[0];
         this.imgCapthcha = "data:image/jpg;base64," + data.data[1];
-        this.$common.successMsg("验证码加载成功", this);
+        this.$common.successMsg("图片验证码加载成功", this);
       }
     },
     // 初始化滑块验证
-    async initSalisPassPort() {
+    async initSalisPassPort(resArr) {
       let params = {
         appid: "otn",
         username: this.loginForm.userName,
@@ -201,10 +196,28 @@ export default {
         this.$common.errorMsg("初始化滑块验证失败", this);
       } else {
         let nc_token = data.data;
-        if (nc_token) {
-          this.getSlidePasscode(nc_token);
-        } else {
-          this.$common.errorMsg("初始化滑块验证失败", this);
+        let nc_token_arr=nc_token.split("--");
+        if(nc_token_arr.length>1){
+          // 登录需要滑块验证
+          if(nc_token_arr[1]=='0'){
+            console.log("用户: "+this.loginForm.userName+" >> 开始登录，需要进行滑块验证...");
+            this.getSlidePasscode(nc_token_arr[0]);
+          }else{
+            this.$common.errorMsg("初始化滑块验证失败", this);
+          }
+        }else{
+          // 登录不需要滑块验证
+          if(nc_token_arr[0]=='1'){
+            console.log("用户: "+this.loginForm.userName+" >> 开始登录，无需进行滑块验证...");
+            var formData = {};
+            formData["username"] = this.loginForm.userName;
+            formData["password"] = "@" + SM4.encrypt_ecb(this.loginForm.password, this.SM4_key);
+            formData["appid"] = "otn"; // popup_passport_appId
+            formData["answer"] = resArr[1];
+            this.userLogin(formData);
+          }else{
+            this.$common.errorMsg("初始化滑块验证失败", this);
+          }
         }
       }
     },
@@ -323,6 +336,18 @@ export default {
         }
       }
     },
+    // 获取登录校验的AppKey
+    async getLoginAppKey(){
+      let params = {};
+      let { data, error } = await api.getLoginAppKey(params);
+      if (error) {
+        console.log(error);
+        this.$common.errorMsg("login_init_appkey fail", this);
+      } else {
+        this.appKey = data.data;
+        this.$common.successMsg("login_init_appkey success", this);
+      }
+    }
   },
 };
 </script>
