@@ -345,6 +345,7 @@ export default {
         this.$common.errorMsg("login_init_appkey fail", this);
       } else {
         this.appKey = data.data;
+        localStorage.setItem("init_slide_passcode_key",data.data);
         this.$common.successMsg("login_init_appkey success", this);
       }
     }

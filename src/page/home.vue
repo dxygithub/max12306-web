@@ -757,7 +757,7 @@ export default {
       activeName: "first",
       orderHistory: [], // 历史订单
       noCompleteOrder: [], // 未完成订单
-      appKey: "FFFF0N000000000097AD", // appkey后期可能会变：(2020-09-24,FFFF0N000000000097AD)
+      appKey: localStorage.getItem("init_slide_passcode_key"),// 滑块校验key
       scene: "nc_login",
       labelPosition: "right",
       excuteSubmitOrderTimeId: "", // 定时提交订单ID
