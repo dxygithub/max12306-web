@@ -737,8 +737,15 @@ export default {
       },
       pickerOptions: {
         disabledDate(time) {
+          // 当前时间
           let curDate = new Date().getTime();
-          let lastDate = 29 * 24 * 60 * 60 * 1000;
+
+          /**
+           * 控制车票预售最大时间范围：lastDate
+           * 默认自当前时间30天以内：29 * 24 * 60 * 60 * 1000 || 2021年疫情期间为15天以内：14 * 24 * 60 * 60 * 1000
+           */
+          let lastDate = 14 * 24 * 60 * 60 * 1000;
+
           let maxTime = curDate + lastDate;
           if (time.getTime() < Date.now() - 8.64e7) {
             return true;
